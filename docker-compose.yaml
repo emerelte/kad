@@ -1,0 +1,10 @@
+version: '3.8'
+services:
+  cluster:
+    container_name: "cluster"
+    build: cluster/.
+    ports:
+      - "8001:8001"
+    privileged: true
+    volumes:
+      - "./secret:/home/secret"
