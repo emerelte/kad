@@ -51,12 +51,28 @@ else
     echo "Admin account not created"
 fi
 
-echo "Installing Prometheus"
+echo "Starting dashboard"
 
-helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
-helm repo add stable https://kubernetes-charts.storage.googleapis.com/
-helm repo update
-helm install prometheus prometheus-community/kube-prometheus-stack --version "9.4.1"
+kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/v2.0.0/aio/deploy/recommended.yaml
+
+#echo "Installing Prometheus"
+
+#helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+#helm repo add stable https://kubernetes-charts.storage.googleapis.com/
+#helm repo update
+#helm install prometheus prometheus-community/kube-prometheus-stack --version "9.4.1"
+#kubectl wait --for=condition=ready pod -l app=netshoot
+#kubectl port-forward service/prometheus-kube-prometheus-prometheus 9090
+
+echo "Starting sock-shop"
+
+kubectl create namespace sock-shop
+kubectl apply -f ./demo_app/deploy/kubernetes/complete-demo.yaml
+
+echo "Starting monitoring"
+
+kubectl create namespace monitoring
+kubectl create -f ./demo_app/deploy/kubernetes/manifests-monitoring
 
 echo "------------------------"
 
