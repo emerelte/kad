@@ -9,6 +9,7 @@ def metric_to_dataframe(metric: dict, metric_name: str):
     return pd.DataFrame(metric_values, columns=[metric_name], index=metric_timestamps)
 
 
-def split_dataset(original_df: pd.DataFrame, metric_name: str) -> Tuple[pd.DataFrame, pd.DataFrame]:
-    return original_df[metric_name][:int(len(original_df) * 3 / 5)], original_df[metric_name][
-                                                                     int(len(original_df) * 3 / 5):]
+def split_dataset(original_df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    split_ratio = 3.5/5
+    return original_df[:int(len(original_df) * split_ratio)], original_df[
+                                                        int(len(original_df) * split_ratio):]
