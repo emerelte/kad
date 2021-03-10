@@ -1,10 +1,19 @@
 version: '3.8'
 services:
-  cluster:
-    container_name: "cluster"
-    build: cluster/.
+  kind-cluster:
+    container_name: "kind-cluster"
+    build: kind_cluster/.
     ports:
       - "8001:8001"
     privileged: true
     volumes:
       - "./secret:/home/secret"
+      - "./microservices-demo-master:/home/demo_app"
+  minikube-cluster:
+    container_name: "minikube-cluster"
+    build: minikube_cluster/.
+    ports:
+      - "8001:8001"
+    privileged: true
+    volumes:
+      - "./microservices-demo-master:/home/demo_app"
