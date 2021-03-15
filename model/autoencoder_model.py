@@ -1,15 +1,21 @@
 import numpy as np
+import pandas as pd
 from tensorflow import keras
 from tensorflow.keras import layers
 from utils import utils
 from matplotlib import pyplot as plt
+from model.i_model import IModel
 
 
 # TODO add base class and implement useful models
-class AutoEncoderModel:
+class AutoEncoderModel(IModel):
 
-    def __init__(self, train_df):
+    def __init__(self):
         self.time_steps = utils.TIME_STEPS
+        self.x_train = None
+        self.nn = None
+
+    def initialize_nn(self, train_df: pd.DataFrame):
         self.x_train = utils.create_sequences(train_df.values, self.time_steps)
         self.nn = keras.Sequential(
             [
@@ -39,7 +45,9 @@ class AutoEncoderModel:
     Takes training dataframe as input and computes internal states that will be used to predict the test data classes
     """
 
-    def train(self):
+    def train(self, train_df: pd.DataFrame):
+        self.initialize_nn(train_df)
+
         history = self.nn.fit(
             self.x_train,
             self.x_train,
@@ -64,7 +72,11 @@ class AutoEncoderModel:
     Appends a column to the df with classes
     """
 
-    def test(self, test_df):
+    def test(self, test_df: pd.DataFrame):
+
+        if self.x_train is None or self.nn is None:
+            raise Exception("Model not trained, cannot test")
+
         x_test = utils.create_sequences(test_df.values)
         x_test_pred = self.nn.predict(x_test)
         test_mae_loss = np.mean(np.abs(x_test_pred - x_test), axis=1)
