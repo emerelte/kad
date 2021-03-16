@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 from tensorflow import keras
 from tensorflow.keras import layers
-from utils import utils
+from kad_utils import kad_utils
 from matplotlib import pyplot as plt
 from model.i_model import IModel
 
@@ -11,12 +11,12 @@ from model.i_model import IModel
 class AutoEncoderModel(IModel):
 
     def __init__(self):
-        self.time_steps = utils.TIME_STEPS
+        self.time_steps = kad_utils.TIME_STEPS
         self.x_train = None
         self.nn = None
 
     def initialize_nn(self, train_df: pd.DataFrame):
-        self.x_train = utils.create_sequences(train_df.values, self.time_steps)
+        self.x_train = kad_utils.create_sequences(train_df.values, self.time_steps)
         self.nn = keras.Sequential(
             [
                 layers.Input(shape=(self.x_train.shape[1], self.x_train.shape[2])),
@@ -77,7 +77,7 @@ class AutoEncoderModel(IModel):
         if self.x_train is None or self.nn is None:
             raise Exception("Model not trained, cannot test")
 
-        x_test = utils.create_sequences(test_df.values)
+        x_test = kad_utils.create_sequences(test_df.values)
         x_test_pred = self.nn.predict(x_test)
         test_mae_loss = np.mean(np.abs(x_test_pred - x_test), axis=1)
         test_mae_loss = test_mae_loss.reshape((-1))
