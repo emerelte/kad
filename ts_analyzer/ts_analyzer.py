@@ -17,11 +17,11 @@ class TsAnalyzer:
     def is_stationary(self):
         # print(self.data.head())
 
-        decompose = seasonal_decompose(self.data.resample('M').sum(), period=12)
-        fig = plt.figure()
-        fig = decompose.plot()
-        fig.set_size_inches(12, 8)
-        plt.show()
+        # decompose = seasonal_decompose(self.data.resample('M').sum(), period=12)
+        # fig = plt.figure()
+        # fig = decompose.plot()
+        # fig.set_size_inches(12, 8)
+        # plt.show()
 
         adf = adfuller(self.data.iloc[:, 0], 12)
         kad_utils.print_adf_results(adf)

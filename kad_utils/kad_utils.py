@@ -7,6 +7,17 @@ PromQueryResponse = List[dict]
 TIME_STEPS = 40
 
 
+def embed_data(x: np.ndarray, steps: int):
+    n = len(x)
+
+    data = np.zeros((n - steps, steps))
+    labels = x[steps:]
+
+    for i in np.arange(steps, n):
+        data[i-steps] = x[i-steps:i]
+    
+    return data, labels
+
 def create_sequences(values, time_steps=TIME_STEPS):
     output = []
 
