@@ -17,13 +17,14 @@ from flask_cors import cross_origin
 PROMETHEUS_URL = "http://localhost:9090/"
 METRIC_NAME = "rest_client_requests_total"
 # TODO remove hardcodes
-START_TIME = datetime.datetime.strptime("2021-03-16 19:00:00", "%Y-%m-%d %H:%M:%S")
-END_TIME = datetime.datetime.strptime("2021-03-16 19:46:00", "%Y-%m-%d %H:%M:%S")
+START_TIME = datetime.datetime.strptime("2021-03-24 18:53:00", "%Y-%m-%d %H:%M:%S")
+END_TIME = datetime.datetime.strptime("2021-03-24 19:01:00", "%Y-%m-%d %H:%M:%S")
+# END_TIME = datetime.datetime.now()
 # LABEL_CONFIG = {"code": "200", "host": "kind-control-plane:6443", "instance": "kind-control-plane",
-#                 "job": "kubernetes-nodes", "method": "PATCH"}
+#                 "job": "kubernetes-nodes", "method": "POST"}
 # TODO dictionary 2 prometheus labels format
-LABEL_CONFIG_STR = "{code=\"200\",host=\"kind-control-plane:6443\",instance=\"kind-control-plane\"," \
-                   "job=\"kubernetes-nodes\", method=\"PATCH\"} "
+LABEL_CONFIG_STR = "{code=\"201\",host=\"kind-control-plane:6443\",instance=\"kind-control-plane\"," \
+                   "job=\"kubernetes-nodes\", method=\"POST\"} "
 QUERY = "rate(" + METRIC_NAME + LABEL_CONFIG_STR + "[1m])"
 
 APP_URL = "http://localhost:5000"
@@ -50,6 +51,15 @@ class KAD(object):
         self.model: i_model.IModel = SarimaModel(order=(0, 0, 0), seasonal_order=(1, 0, 1, 24))
         self.results_df: pd.DataFrame = None
 
+    def get_train_data(self):
+        metric_range = self.prom.perform_query(query=QUERY,
+                                               start_time=START_TIME,
+                                               end_time=END_TIME)
+
+        metric = response_validator.validate(metric_range)
+        train_df = metric_parser.metric_to_dataframe(metric, METRIC_NAME).astype(float)
+        return kad_utils.normalize(train_df, train_df.mean(), train_df.std())
+
     def update_next_timestamp(self, df: pd.DataFrame):
         last_timestamps = df[-2:].index
         basic_timedelta = last_timestamps[1] - last_timestamps[0]
@@ -73,9 +83,9 @@ class KAD(object):
 
         fig, ax = plt.subplots()
         anomalies_df = self.results_df.loc[self.results_df["is_anomaly"] == True]
-        self.results_df["value"].plot(ax=ax)
-        self.results_df.reset_index().plot.scatter(x="timestamp", y="predictions", ax=ax, color="g")
-        anomalies_df.reset_index().plot.scatter(x="timestamp", y="value", ax=ax, color="r")
+        self.results_df[METRIC_NAME].plot(ax=ax)
+        self.results_df.reset_index().plot.scatter(x="index", y="predictions", ax=ax, color="g")
+        anomalies_df.reset_index().plot.scatter(x="index", y=METRIC_NAME, ax=ax, color="r")
         plt.legend(["Actual TS", "Predictions", "Anomalies"])
 
         bytes_image = io.BytesIO()
@@ -105,12 +115,15 @@ class KAD(object):
     @cross_origin(supports_credentials=True)
     def update_data(self):
         logging.debug("Updating data")
-        df1, df2 = kad_utils.get_dummy_data()  # TODO for testing purpose only
-        whole_data = pd.concat([df1, df2])
-        dummy_update_interval = 1 * 24 * 60 * 60  # one day
 
-        new_data = whole_data.loc[
-                   self.next_timestamp:self.next_timestamp + datetime.timedelta(seconds=dummy_update_interval)]
+        metric_range = self.prom.perform_query(query=QUERY,
+                                               start_time=START_TIME,
+                                               end_time=datetime.datetime.now())
+        metric = response_validator.validate(metric_range)
+        whole_df = metric_parser.metric_to_dataframe(metric, METRIC_NAME).astype(float)
+        whole_df = kad_utils.normalize(whole_df, whole_df.mean(), whole_df.std())
+        new_data = whole_df.loc[
+                   self.next_timestamp:self.next_timestamp + datetime.timedelta(seconds=UPDATE_INTERVAL_SEC)]
 
         if len(new_data) == 0:
             logging.warning("No new data has been obtained")
@@ -129,22 +142,10 @@ if __name__ == "__main__":
     kad = KAD()
 
     try:
-        # metric_range = self.prom.perform_query(query=QUERY,
-        #                                        start_time=START_TIME,
-        #                                        end_time=END_TIME)
-        #
-        # metric = response_validator.validate(metric_range)
-        # metric_df = metric_parser.metric_to_dataframe(metric, METRIC_NAME).astype(float)
-        # train_df, test_df = metric_parser.split_dataset(metric_df)
+        train_df = kad.get_train_data()
 
-        train_df, test_df = kad_utils.get_dummy_data()  # TODO replace dummy
-
-        # test_df = kad_utils.normalize(test_df, train_df.mean(), train_df.std())
-        # train_df = kad_utils.normalize(train_df, train_df.mean(), train_df.std())
-
-        # train_df[METRIC_NAME].plot()
-        # test_df[METRIC_NAME].plot()
-        # plt.show()
+        train_df[METRIC_NAME].plot()
+        plt.show()
 
         kad.train_model(train_df)
 
