@@ -1,6 +1,8 @@
 import React, {Component} from 'react';
 import axios from 'axios';
 
+const REFRESH_TIME_SEC = 1
+
 class App extends Component {
     state = {
         message: null,
@@ -9,25 +11,11 @@ class App extends Component {
 
     componentDidMount() {
         setInterval(() => {
-            this.setImage("http://localhost:5000/plot_results?timestamp=" + new Date().getTime());
-            this.updateData("http://localhost:5000/update_data");
-        }, 10000);
+            this.updateImage("http://localhost:5000/plot_results?timestamp=" + new Date().getTime());
+        }, REFRESH_TIME_SEC * 1000);
     }
 
-    updateData = (url) => {
-        fetch(url)
-            .then((response) => {
-                if (response.status === 201) {
-                    this.setState({message: "Data updated!"});
-                } else {
-                    throw Error(response.statusText)
-                }
-            }).catch(error => {
-            this.setState({message: "Error updating data " + error});
-        })
-    }
-
-    setImage(url) {
+    updateImage(url) {
         axios.get(
             url,
             {responseType: 'arraybuffer'}
@@ -41,10 +29,9 @@ class App extends Component {
                 );
                 this.setState({source: "data:;base64," + base64});
                 this.setState({message: null});
-            }).catch((err) => {
-                this.setState({message: "Error fetching image!"})
-                this.setState({source: null});
-                console.error(err)
+            }).catch(() => {
+            this.setState({message: "Error fetching image!"})
+            this.setState({source: null});
         });
     }
 
