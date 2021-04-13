@@ -1,7 +1,5 @@
 import unittest
 from numpy.testing import assert_array_equal
-import datetime
-import pandas as pd
 import numpy as np
 import kad_utils
 

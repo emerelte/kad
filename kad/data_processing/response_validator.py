@@ -1,4 +1,4 @@
-from kad_utils import kad_utils
+from kad.kad_utils import kad_utils
 
 
 class MetricValidatorException(Exception):

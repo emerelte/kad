@@ -1,8 +1,7 @@
-import logging
-from kad_utils import kad_utils
+from kad.kad_utils import kad_utils
 import datetime
 import prometheus_api_client as prom_api
-from prometheus_api_client import MetricsList, PrometheusConnect
+from prometheus_api_client import MetricsList
 
 
 class PrometheusConnectWrapper:
@@ -10,7 +9,7 @@ class PrometheusConnectWrapper:
         self.prom = prom_api.PrometheusConnect(url=prometheus_url, disable_ssl=True)
 
     def perform_query(self, query: str, start_time: datetime, end_time: datetime) -> kad_utils.PromQueryResponse:
-        return self.prom.custom_query_range(query=query, start_time=start_time, end_time=end_time, step="1")
+        return self.prom.custom_query_range(query=query, start_time=start_time, end_time=end_time, step="10")
 
     def fetch_metric_range_data(self, metric_name: str, start_time: datetime, end_time: datetime,
                                 label_config: dict) -> MetricsList:

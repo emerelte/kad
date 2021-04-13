@@ -1,8 +1,6 @@
 import pandas as pd
-import matplotlib.pyplot as plt
-from statsmodels.tsa.seasonal import seasonal_decompose
 from statsmodels.tsa.stattools import adfuller
-from kad_utils import kad_utils
+from kad.kad_utils import kad_utils
 
 
 class TsAnalyzer:

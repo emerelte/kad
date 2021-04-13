@@ -74,6 +74,20 @@ echo "Starting monitoring"
 kubectl create namespace monitoring
 kubectl create -f ./demo_app/deploy/kubernetes/manifests-monitoring
 
+# TODO some smart solution for automatic port-forward
+#kubectl port-forward service/prometheus 9090 -n monitoring
+#pid=$!
+#count=$(ps -A| grep $pid |wc -l)
+#sleep 2
+#until [[ $count -eq 0 ]]
+#do
+#    echo "Waiting for deployments to be ready - starting prometheus port-forward"
+#    sleep 10
+#    kubectl port-forward service/prometheus 9090 -n monitoring
+#    pid=$!
+#    count=$(ps -A| grep $pid |wc -l)
+#done
+
 echo "------------------------"
 
 exec $@

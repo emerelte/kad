@@ -2,9 +2,9 @@ import numpy as np
 import pandas as pd
 from tensorflow import keras
 from tensorflow.keras import layers
-from kad_utils import kad_utils
+from kad.kad_utils import kad_utils
 from matplotlib import pyplot as plt
-from model.i_model import IModel
+from kad.model.i_model import IModel
 
 
 # TODO add base class and implement useful models
