@@ -20,7 +20,7 @@ class ExemplaryDataSource(IDataSource):
         self.original_df = pd.read_csv(
             path, parse_dates=True, index_col="timestamp"
         )
-        self.original_df = self.original_df.resample("h").agg(np.mean)
+        self.original_df = self.original_df.resample("5h").agg(np.mean)
 
         self.next_timestamp = None
         self.basic_timedelta = None
@@ -29,10 +29,14 @@ class ExemplaryDataSource(IDataSource):
         self.next_timestamp = df.index[-1] + self.basic_timedelta
 
     def set_basic_timedelta(self, train_df: pd.DataFrame):
-        if len(train_df) < 2:
-            raise DataSourceException("Cannot set timedelta when training df len is < 2")
-        last_timestamps = train_df[:2].index
-        self.basic_timedelta = last_timestamps[1] - last_timestamps[0]
+        # if len(train_df) < 2:
+        #     raise DataSourceException("Cannot set timedelta when training df len is < 2")
+        # last_timestamps = train_df[:2].index
+        # self.basic_timedelta = last_timestamps[1] - last_timestamps[0]
+        if train_df.index.freq is None:
+            raise DataSourceException("Cannot set timedelta when data frame index has no freq")
+
+        self.basic_timedelta = pd.to_timedelta(train_df.index.freq)
 
     def get_train_data(self) -> pd.DataFrame:
         train_df = self.original_df[self.start_time:self.stop_time]
@@ -44,7 +48,11 @@ class ExemplaryDataSource(IDataSource):
 
     def get_next_batch(self):
         new_data = self.original_df.loc[
-                   self.next_timestamp:self.next_timestamp + datetime.timedelta(seconds=self.update_interval_hours*60*60)]
+                   self.next_timestamp:self.next_timestamp + datetime.timedelta(
+                       seconds=self.update_interval_hours * 60 * 60)]
+
+        if new_data.empty:
+            raise DataSourceException("No new data to fetch!")
 
         self.update_next_timestamp(new_data)
         return new_data
