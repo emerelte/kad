@@ -9,12 +9,11 @@ ANOMALIES_COLUMN: str = "is_anomaly"
 GROUND_TRUTH_COLUMN: str = "gt_is_anomaly"
 
 
-def visualize(results_df: pd.DataFrame, metric_name: str):
-    results_df[ANOMALIES_COLUMN] = results_df[ANOMALIES_COLUMN].fillna(False)
+def visualize(results_df: pd.DataFrame, metric_name: str, title: str = "Anomaly visualization"):
     results_df.index = results_df.index.set_names([X_LABEL])
 
     fig, ax = plt.subplots()
-    fig.set_size_inches(12, 8)
+    fig.set_size_inches(20, 10)
     results_df[metric_name].plot.line(ax=ax)
 
     columns_labels: list = ["Actual TS"]
@@ -24,10 +23,11 @@ def visualize(results_df: pd.DataFrame, metric_name: str):
             x=X_LABEL,
             y="predictions",
             ax=ax,
-            color="g")
+            color="b")
         columns_labels.append("Predictions")
 
     if ANOMALIES_COLUMN in results_df and np.any(results_df[ANOMALIES_COLUMN]):
+        results_df[ANOMALIES_COLUMN] = results_df[ANOMALIES_COLUMN].fillna(False)
         results_df[results_df[ANOMALIES_COLUMN]].reset_index().plot.scatter(
             x=X_LABEL,
             y=metric_name,
@@ -43,4 +43,14 @@ def visualize(results_df: pd.DataFrame, metric_name: str):
             color="g")
         columns_labels.append("GT Anomalies")
 
+    if GROUND_TRUTH_COLUMN and ANOMALIES_COLUMN in results_df and np.any(
+            results_df[GROUND_TRUTH_COLUMN and ANOMALIES_COLUMN]):
+        results_df[results_df[GROUND_TRUTH_COLUMN and ANOMALIES_COLUMN]].reset_index().plot.scatter(
+            x=X_LABEL,
+            y="value",
+            ax=ax,
+            color=["magenta"])
+        columns_labels.append("Predicted & GT Anomalies")
+
     plt.legend(columns_labels)
+    fig.suptitle(title, fontsize=16)

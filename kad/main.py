@@ -7,7 +7,7 @@ import requests
 from apscheduler.schedulers.background import BackgroundScheduler
 from matplotlib import pyplot as plt
 import pandas as pd
-from kad.data_processing import prom_wrapper, metric_parser, response_validator
+from kad.data_processing import response_validator
 from kad.data_sources import i_data_source
 from kad.data_sources.exemplary_data_source import ExemplaryDataSource
 from kad.data_sources.i_data_source import DataSourceException
@@ -125,7 +125,11 @@ class KAD(object):
     def update_data(self):
         logging.debug("Updating data")
 
-        new_data = self.data_source.get_next_batch()
+        try:
+            new_data = self.data_source.get_next_batch()
+        except DataSourceException as dsexc:
+            logging.warning(str(dsexc))
+            return Response(status=200, headers={})  # TODO is 200 code ok here?
 
         if len(new_data) == 0:
             logging.warning("No new data has been obtained")
