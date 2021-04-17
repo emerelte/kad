@@ -10,13 +10,16 @@ from kad.model.i_model import IModel
 # TODO add base class and implement useful models
 class AutoEncoderModel(IModel):
 
-    def __init__(self):
-        self.time_steps = kad_utils.TIME_STEPS
-        self.x_train = None
+    def __init__(self, time_steps: int = kad_utils.TIME_STEPS):
+        self.threshold = None
+        self.time_steps = time_steps
+        self.result_df = None
+        self.x_train: np.ndarray = None
         self.nn = None
 
     def initialize_nn(self, train_df: pd.DataFrame):
-        self.x_train = kad_utils.create_sequences(train_df.values, self.time_steps)
+        self.result_df = train_df
+        self.x_train, _ = kad_utils.embed_data(data=train_df.to_numpy().flatten(), steps=self.time_steps)
         self.nn = keras.Sequential(
             [
                 layers.Input(shape=(self.x_train.shape[1], self.x_train.shape[2])),
@@ -39,7 +42,6 @@ class AutoEncoderModel(IModel):
         )
         self.nn.compile(optimizer=keras.optimizers.Adam(learning_rate=0.001), loss="mse")
         self.nn.summary()
-        self.threshold = None
 
     """
     Takes training dataframe as input and computes internal states that will be used to predict the test data classes
@@ -77,7 +79,7 @@ class AutoEncoderModel(IModel):
         if self.x_train is None or self.nn is None:
             raise Exception("Model not trained, cannot test")
 
-        x_test = kad_utils.create_sequences(test_df.values)
+        x_test, _ = kad_utils.embed_data(data=test_df.to_numpy().flatten(), steps=self.time_steps)
         x_test_pred = self.nn.predict(x_test)
         test_mae_loss = np.mean(np.abs(x_test_pred - x_test), axis=1)
         test_mae_loss = test_mae_loss.reshape((-1))
@@ -88,8 +90,8 @@ class AutoEncoderModel(IModel):
         for data_idx in range(self.time_steps - 1, len(test_df) - self.time_steps + 1):
             if np.any(anomalies[data_idx - self.time_steps + 1: data_idx]):
                 anomalous_data_indices.append(data_idx)
+        is_anomaly = [i in anomalous_data_indices for i in range(len(test_df))]
+        test_df["is_anomaly"] = is_anomaly
 
-        result_df = test_df.copy()
-        is_anomaly = [i in anomalous_data_indices for i in range(len(result_df))]
-        result_df["is_anomaly"] = is_anomaly
+        result_df = pd.concat([self.result_df, test_df])
         return result_df

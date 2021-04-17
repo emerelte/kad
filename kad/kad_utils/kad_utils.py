@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 from flask import Response
 from sklearn.preprocessing import MinMaxScaler
+from matplotlib import pyplot as plt
 
 PromQueryResponse = List[dict]
 
@@ -26,16 +27,16 @@ def get_dummy_data():
     return original_df[:first_training_samples], original_df[first_training_samples:]
 
 
-def embed_data(x: np.ndarray, steps: int):
-    n = len(x)
+def embed_data(data: np.ndarray, steps: int):
+    n = len(data)
 
-    data = np.zeros((n - steps, steps))
-    labels = x[steps:]
+    embedded_data = np.zeros((n - steps, steps))
+    labels = data[steps:]
 
     for i in np.arange(steps, n):
-        data[i - steps] = x[i - steps:i]
+        embedded_data[i - steps] = data[i - steps:i]
 
-    return data, labels
+    return embedded_data[:, :, np.newaxis], labels
 
 
 def create_sequences(values, time_steps=TIME_STEPS):
@@ -88,3 +89,15 @@ class EndpointAction(object):
     def __call__(self, *args):
         self.response = self.action()
         return self.response
+
+
+def customize_matplotlib(color="white", labelsize=16, fontsize="xx-large"):
+    plt.rcParams["xtick.color"] = color
+    plt.rcParams["xtick.labelsize"] = labelsize
+    plt.rcParams["ytick.color"] = color
+    plt.rcParams["ytick.labelsize"] = labelsize
+    plt.rcParams["axes.titlesize"] = labelsize
+    plt.rcParams["axes.titlecolor"] = color
+    plt.rcParams["axes.labelsize"] = labelsize
+    plt.rcParams["axes.labelcolor"] = color
+    plt.rcParams["legend.fontsize"] = fontsize
