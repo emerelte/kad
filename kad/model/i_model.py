@@ -2,6 +2,14 @@ from abc import ABC, abstractmethod
 import pandas as pd
 
 
+class ModelException(Exception):
+    def __init__(self, message="Model Exception"):
+        self.message = message
+
+    def __str__(self):
+        return f"{self.message}"
+
+
 class IModel(ABC):
     def train(self, train_df: pd.DataFrame):
         pass

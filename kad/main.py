@@ -2,7 +2,6 @@ import io
 import datetime
 import logging
 import os
-
 import requests
 from apscheduler.schedulers.background import BackgroundScheduler
 from matplotlib import pyplot as plt
@@ -15,6 +14,7 @@ from kad.data_sources.prom_data_source import PrometheusDataSource
 from kad.kad_utils import kad_utils
 from kad.kad_utils.kad_utils import EndpointAction
 from kad.model import i_model
+from kad.model.autoencoder_model import AutoEncoderModel
 from kad.model.sarima_model import SarimaModel
 from flask import Flask, send_file, Response
 from flask_cors import cross_origin
@@ -39,12 +39,13 @@ QUERY = "rate(" + METRIC_NAME + LABEL_CONFIG_STR + "[1m])"
 APP_URL = "http://localhost:5000"
 UPDATE_DATA_ENDPOINT = "/update_data"
 PLOT_RESULTS_ENDPOINT = "/plot_results"
-UPDATE_INTERVAL_SEC = 5
+UPDATE_INTERVAL_SEC = 1
 
 
 def request_new_data():
     logging.debug("Requesting new data...")
     r = requests.get(APP_URL + UPDATE_DATA_ENDPOINT)
+
     if r.status_code != 200:
         logging.warning("Something went wrong when requesting data update")
 
@@ -71,6 +72,7 @@ class KAD(object):
         #                                                        start_time=START_TIME, stop_time=END_TIME,
         #                                                        update_interval_sec=UPDATE_INTERVAL_SEC)
         self.model: i_model.IModel = SarimaModel(order=(0, 0, 0), seasonal_order=(1, 0, 1, 24))
+        # self.model: i_model.IModel = AutoEncoderModel(time_steps=12)
         self.results_df: pd.DataFrame = None
         self.train_mean = None
         self.train_std = None
@@ -103,7 +105,7 @@ class KAD(object):
         return bytes_image
 
     def run(self):
-        self.app.run(debug=True)
+        self.app.run(debug=True, threaded=True)
 
     def add_endpoint(self, endpoint=None, endpoint_name=None, handler=None):
         self.app.add_url_rule(endpoint, endpoint_name, EndpointAction(handler))
@@ -137,7 +139,11 @@ class KAD(object):
 
         new_data = kad_utils.normalize(new_data, self.train_mean, self.train_std)
 
-        self.test(new_data)
+        try:
+            self.test(new_data)
+            self.data_source.update_last_processed_timestamp()
+        except Exception as exc:
+            logging.warning("Impossible to test: " + str(exc))
 
         return Response(status=200, headers={})
 

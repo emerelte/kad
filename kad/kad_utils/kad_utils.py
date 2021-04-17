@@ -30,6 +30,9 @@ def get_dummy_data():
 def embed_data(data: np.ndarray, steps: int):
     n = len(data)
 
+    if steps >= n:
+        raise Exception(f"Cannot embed data when steps({steps}) >= len(data)({n})")
+
     embedded_data = np.zeros((n - steps, steps))
     labels = data[steps:]
 

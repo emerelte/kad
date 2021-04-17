@@ -20,13 +20,17 @@ class ExemplaryDataSource(IDataSource):
         self.original_df = pd.read_csv(
             path, parse_dates=True, index_col="timestamp"
         )
-        self.original_df = self.original_df.resample("5h").agg(np.mean)
+        self.original_df = self.original_df.resample("1h").agg(np.mean)
 
-        self.next_timestamp = None
+        self.last_processed_timestamp = None
+        self.latest_timestamp = None
         self.basic_timedelta = None
 
-    def update_next_timestamp(self, df: pd.DataFrame):
-        self.next_timestamp = df.index[-1] + self.basic_timedelta
+    def update_latest_timestamp(self, df: pd.DataFrame):
+        self.latest_timestamp = df.index[-1] + self.basic_timedelta
+
+    def undo_next_timestamp(self):
+        self.latest_timestamp = self.last_processed_timestamp
 
     def set_basic_timedelta(self, train_df: pd.DataFrame):
         # if len(train_df) < 2:
@@ -42,17 +46,22 @@ class ExemplaryDataSource(IDataSource):
         train_df = self.original_df[self.start_time:self.stop_time]
 
         self.set_basic_timedelta(train_df)
-        self.update_next_timestamp(train_df)
+        self.update_latest_timestamp(train_df)
+        self.update_last_processed_timestamp()
 
         return train_df
 
     def get_next_batch(self):
         new_data = self.original_df.loc[
-                   self.next_timestamp:self.next_timestamp + datetime.timedelta(
+                   self.last_processed_timestamp:self.latest_timestamp + datetime.timedelta(
                        seconds=self.update_interval_hours * 60 * 60)]
 
         if new_data.empty:
             raise DataSourceException("No new data to fetch!")
 
-        self.update_next_timestamp(new_data)
+        self.update_latest_timestamp(new_data)
+        logging.debug("next batch len: " + str(len(new_data)))
         return new_data
+
+    def update_last_processed_timestamp(self):
+        self.last_processed_timestamp = self.latest_timestamp

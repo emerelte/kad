@@ -16,3 +16,6 @@ class IDataSource(ABC):
 
     def get_next_batch(self):
         pass
+
+    def update_last_processed_timestamp(self):
+        pass
