@@ -60,7 +60,6 @@ class ExemplaryDataSource(IDataSource):
             raise DataSourceException("No new data to fetch!")
 
         self.update_latest_timestamp(new_data)
-        logging.debug("next batch len: " + str(len(new_data)))
         return new_data
 
     def update_last_processed_timestamp(self):

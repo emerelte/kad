@@ -15,6 +15,7 @@ from kad.kad_utils import kad_utils
 from kad.kad_utils.kad_utils import EndpointAction
 from kad.model import i_model
 from kad.model.autoencoder_model import AutoEncoderModel
+from kad.model.hmm_model import HmmModel
 from kad.model.sarima_model import SarimaModel
 from flask import Flask, send_file, Response
 from flask_cors import cross_origin
@@ -66,13 +67,14 @@ class KAD(object):
             metric_name=METRIC_NAME,
             start_time=datetime.datetime.strptime("2014-04-01 14:00:00", "%Y-%m-%d %H:%M:%S"),
             stop_time=datetime.datetime.strptime("2014-04-09 14:00:00", "%Y-%m-%d %H:%M:%S"),
-            update_interval_hours=2)
+            update_interval_hours=10)
         # self.data_source: i_data_source = PrometheusDataSource(query=QUERY, prom_url=PROMETHEUS_URL,
         #                                                        metric_name=METRIC_NAME,
         #                                                        start_time=START_TIME, stop_time=END_TIME,
         #                                                        update_interval_sec=UPDATE_INTERVAL_SEC)
-        self.model: i_model.IModel = SarimaModel(order=(0, 0, 0), seasonal_order=(1, 0, 1, 24))
-        # self.model: i_model.IModel = AutoEncoderModel(time_steps=12)
+        # self.model: i_model.IModel = SarimaModel(order=(0, 0, 0), seasonal_order=(1, 0, 1, 24))
+        self.model: i_model.IModel = AutoEncoderModel(time_steps=12)
+        # self.model: i_model.IModel = HmmModel()
         self.results_df: pd.DataFrame = None
         self.train_mean = None
         self.train_std = None
