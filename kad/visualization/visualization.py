@@ -45,7 +45,7 @@ def visualize(results_df: pd.DataFrame, metric_name: str, title: str = "Anomaly 
 
     if GROUND_TRUTH_COLUMN in results_df and ANOMALIES_COLUMN in results_df and np.any(
             results_df[results_df[GROUND_TRUTH_COLUMN] & results_df[ANOMALIES_COLUMN]]):
-        results_df[results_df[GROUND_TRUTH_COLUMN and ANOMALIES_COLUMN]].reset_index().plot.scatter(
+        results_df[results_df[GROUND_TRUTH_COLUMN] & results_df[ANOMALIES_COLUMN]].reset_index().plot.scatter(
             x=X_LABEL,
             y="value",
             ax=ax,

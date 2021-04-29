@@ -16,7 +16,7 @@ class TestKadUtils(unittest.TestCase):
         expected_data = np.array([[[1.], [2.]],
                                   [[2.], [3.]],
                                   [[3.], [4.]]])
-        expected_labels = np.array([3., 4., 5.])
+        expected_labels = np.array([[3.], [4.], [5.]])
 
         data, labels = kad_utils.embed_data(input_array, steps)
 

@@ -39,7 +39,7 @@ def embed_data(data: np.ndarray, steps: int):
     for i in np.arange(steps, n):
         embedded_data[i - steps] = data[i - steps:i]
 
-    return embedded_data[:, :, np.newaxis], labels
+    return embedded_data[:, :, np.newaxis], labels[:, np.newaxis]
 
 
 def create_sequences(values, time_steps=TIME_STEPS):

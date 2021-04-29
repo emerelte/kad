@@ -13,7 +13,7 @@ class AutoEncoderModel(IModel):
     def __init__(self, time_steps: int = kad_utils.TIME_STEPS, batch_size=12):
         if time_steps < batch_size:
             raise ModelException(
-                f"Improper parameters for Autoencoder: time_steps({time_steps}) must be lower than batch_size({batch_size})")
+                f"Improper parameters for Autoencoder: time_steps({time_steps}) must be higher or equal than batch_size({batch_size})")
 
         self.threshold = None
         self.time_steps = time_steps
