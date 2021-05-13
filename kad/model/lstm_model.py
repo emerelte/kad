@@ -1,10 +1,15 @@
 import logging
+from typing import List
+
 import numpy as np
 import pandas as pd
+from sklearn.preprocessing import MinMaxScaler
 from tensorflow import keras
 from tensorflow.keras import layers
 from kad.kad_utils import kad_utils
 from matplotlib import pyplot as plt
+
+from kad.kad_utils.kad_utils import ANOM_SCORE_COLUMN, ANOMALIES_COLUMN, PREDICTIONS_COLUMN
 from kad.model.i_model import IModel, ModelException
 
 
@@ -30,12 +35,16 @@ class LstmModel(IModel):
                 layers.LSTM(64, activation="relu", input_shape=(self.x_train.shape[1], self.x_train.shape[2]),
                             return_sequences=True),
                 layers.LSTM(64, activation="relu", return_sequences=False),
-                layers.Dropout(rate=0.2),
+                layers.Dropout(rate=0.1),
                 layers.Dense(self.y_train.shape[1]),
             ]
         )
         self.nn.compile(optimizer=keras.optimizers.Adam(learning_rate=0.001), loss="mse")
         self.nn.summary()
+
+    def __update_threshold(self):
+        # TODO dynamically update threshold during testing phase
+        pass
 
     def train(self, train_df: pd.DataFrame):
         """
@@ -49,7 +58,7 @@ class LstmModel(IModel):
             self.y_train,
             epochs=50,
             batch_size=self.batch_size,
-            validation_split=0.1,
+            validation_split=0.5,
             callbacks=[
                 keras.callbacks.EarlyStopping(monitor="val_loss", patience=5, mode="min")
             ],
@@ -64,7 +73,8 @@ class LstmModel(IModel):
         train_mae_loss = np.mean(np.abs(forecast - self.y_train), axis=1)
         self.threshold = np.max(train_mae_loss)
         self.result_df = train_df.copy()
-        self.result_df.loc[-len(forecast):, "predictions"] = forecast
+        self.result_df.loc[-len(forecast):, PREDICTIONS_COLUMN] = forecast
+        self.result_df[ANOMALIES_COLUMN] = False
 
     def test(self, test_df: pd.DataFrame):
         """
@@ -77,7 +87,7 @@ class LstmModel(IModel):
             raise ModelException("Model not trained, cannot test")
 
         extended_test_df = np.concatenate((self.result_df[test_df.columns[0]].to_numpy()[-self.time_steps:],
-                                          test_df.to_numpy().flatten()))
+                                           test_df.to_numpy().flatten()))
 
         x_test, y_test = kad_utils.embed_data(data=extended_test_df, steps=self.time_steps)
 
@@ -91,9 +101,14 @@ class LstmModel(IModel):
 
         temp_df = test_df.copy()
         temp_df["is_anomaly"] = anomalies
+        temp_df.loc[-len(forecast):, "residuals"] = absolute_error
         temp_df.loc[-len(forecast):, "predictions"] = forecast
 
         self.result_df = pd.concat([self.result_df, temp_df])
+        self.result_df[-len(forecast):, ANOM_SCORE_COLUMN] = kad_utils.calculate_anomaly_score(self.result_df["residuals"])[-len(forecast):]
+
+        self.__update_threshold()
 
         logging.debug("LSTM Model ended testing!")
+
         return self.result_df

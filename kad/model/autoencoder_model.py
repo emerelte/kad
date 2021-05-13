@@ -5,6 +5,8 @@ from tensorflow import keras
 from tensorflow.keras import layers
 from kad.kad_utils import kad_utils
 from matplotlib import pyplot as plt
+
+from kad.kad_utils.kad_utils import calculate_anomaly_score, ANOM_SCORE_COLUMN
 from kad.model.i_model import IModel, ModelException
 
 
@@ -74,13 +76,17 @@ class AutoEncoderModel(IModel):
 
         x_train_pred = self.nn.predict(self.x_train)
         train_mae_loss = np.mean(np.abs(x_train_pred - self.x_train), axis=1)
+
+        self.result_df["residuals"] = np.append(np.array([None for _ in range(self.time_steps)]), train_mae_loss)
+        self.result_df[ANOM_SCORE_COLUMN] = calculate_anomaly_score(self.result_df["residuals"])
+
         self.threshold = np.max(train_mae_loss)
 
-    """
-    Appends a column to the df with classes
-    """
-
     def test(self, test_df: pd.DataFrame):
+        """
+        Appends a column to the df with classes
+        """
+
         logging.debug("Autoencoder tests!")
 
         if self.x_train is None or self.nn is None:
@@ -88,7 +94,8 @@ class AutoEncoderModel(IModel):
 
         # fixme magic number
         if len(test_df) < 5 * self.time_steps:
-            raise ModelException("Autencoder should get at least 5*self.time_steps long data to give reasonable results")
+            raise ModelException(
+                "Autencoder should get at least 5*self.time_steps long data to give reasonable results")
 
         x_test, _ = kad_utils.embed_data(data=test_df.to_numpy().flatten(), steps=self.time_steps)
 
@@ -108,6 +115,9 @@ class AutoEncoderModel(IModel):
         temp_df["is_anomaly"] = is_anomaly
 
         self.result_df = pd.concat([self.result_df, temp_df])
+        self.result_df.loc[-len(x_test):, "residuals"] = test_mae_loss
+        self.result_df.loc[-len(x_test):, ANOM_SCORE_COLUMN] = calculate_anomaly_score(self.result_df["residuals"])[
+                                                                 -len(x_test):]
 
         logging.debug("Autoencoder ended testing!")
         return self.result_df

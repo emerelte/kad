@@ -3,6 +3,7 @@ import numpy as np
 from hmmlearn.hmm import GaussianHMM
 import warnings
 
+from kad.kad_utils.kad_utils import calculate_anomaly_score, ANOM_SCORE_COLUMN
 from kad.model import i_model
 
 
@@ -43,6 +44,8 @@ class HmmModel(i_model.IModel):
             temp_df = test_df.copy()
             temp_df["predictions"] = samples
             temp_df["is_anomaly"] = is_anomaly
+            temp_df["residuals"] = absolute_error
+            temp_df[ANOM_SCORE_COLUMN] = calculate_anomaly_score(temp_df["residuals"])
 
             self.result_df = pd.concat([self.result_df, temp_df])
 

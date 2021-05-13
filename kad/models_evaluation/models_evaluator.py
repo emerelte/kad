@@ -2,8 +2,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import sklearn.metrics as metrics
 
-PREDICTED_COLUMN: str = "is_anomaly"
-GT_COLUMN: str = "gt_is_anomaly"
+from kad.kad_utils.kad_utils import GROUND_TRUTH_COLUMN, ANOMALIES_COLUMN, ANOM_SCORE_COLUMN
 
 
 class ModelsEvaluator:
@@ -15,28 +14,28 @@ class ModelsEvaluator:
         self.df = df
 
     def get_accuracy(self):
-        return metrics.accuracy_score(y_true=self.df[GT_COLUMN], y_pred=self.df[PREDICTED_COLUMN])
+        return metrics.accuracy_score(y_true=self.df[GROUND_TRUTH_COLUMN], y_pred=self.df[ANOMALIES_COLUMN])
 
     def plot_confusion_matrix(self):
-        cm = metrics.confusion_matrix(y_true=self.df[GT_COLUMN], y_pred=self.df[PREDICTED_COLUMN])
+        cm = metrics.confusion_matrix(y_true=self.df[GROUND_TRUTH_COLUMN], y_pred=self.df[ANOMALIES_COLUMN])
         fig, ax = plt.subplots()
         fig.set_size_inches(12, 8)
         metrics.ConfusionMatrixDisplay(cm).plot(ax=ax)
 
     def plot_precision_recall_curve(self):
         plt.figure(figsize=(20, 10))
-        precision, recall, thresholds = metrics.precision_recall_curve(y_true=self.df[GT_COLUMN],
-                                                                       probas_pred=self.df[PREDICTED_COLUMN])
+        precision, recall, thresholds = metrics.precision_recall_curve(y_true=self.df[GROUND_TRUTH_COLUMN],
+                                                                       probas_pred=self.df[ANOM_SCORE_COLUMN])
         plt.step(recall, precision, color="k", alpha=0.7, where="post")
         plt.fill_between(recall, precision, step="post", alpha=0.3, color="k")
         plt.xlabel("Recall")
         plt.ylabel("Precision")
 
     def get_average_precision(self):
-        return metrics.average_precision_score(y_true=self.df[GT_COLUMN], y_score=self.df[PREDICTED_COLUMN])
+        return metrics.average_precision_score(y_true=self.df[GROUND_TRUTH_COLUMN], y_score=self.df[ANOM_SCORE_COLUMN])
 
     def plot_roc(self):
-        fpr, tpr, thresholds = metrics.roc_curve(y_true=self.df[GT_COLUMN], y_score=self.df[PREDICTED_COLUMN])
+        fpr, tpr, thresholds = metrics.roc_curve(y_true=self.df[GROUND_TRUTH_COLUMN], y_score=self.df[ANOM_SCORE_COLUMN])
         area_under_roc = metrics.auc(fpr, tpr)
 
         plt.figure(figsize=(20, 10))

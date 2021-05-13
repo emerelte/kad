@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 from statsmodels.tsa.statespace.sarimax import SARIMAX
 
+from kad.kad_utils.kad_utils import ANOMALIES_COLUMN, PREDICTIONS_COLUMN, calculate_anomaly_score, ANOM_SCORE_COLUMN
 from kad.model import i_model
 
 
@@ -29,39 +30,38 @@ class SarimaModel(i_model.IModel):
         self.model_results = self.model.fit()
         print(self.model_results.summary())
 
-        self.result_df = train_df.copy()
-        self.result_df["predictions"] = np.full(len(self.result_df), None)
-        self.result_df["pred_err"] = np.full(len(self.result_df), None)
-        self.result_df["is_anomaly"] = np.full(len(self.result_df), None)
-
-        # TODO think of a better way of choosing threshold
         samples_to_forecast = len(train_df) - split_idx
-        ground_truth = train_df[-samples_to_forecast:].values.squeeze()
         forecast = self.model_results.forecast(samples_to_forecast)
+        ground_truth = train_df[-samples_to_forecast:].to_numpy().flatten()
+        resid = np.abs(forecast - ground_truth)
         self.model_results = self.model_results.append(ground_truth)
-        absolute_error = np.abs(ground_truth - forecast)
-        self.threshold = max(np.max(absolute_error), self.threshold)
+
+        self.result_df = train_df.copy()
+        self.result_df.loc[-samples_to_forecast:, "predictions"] = forecast
+        self.result_df.loc[-samples_to_forecast:, "residuals"] = resid
+        self.result_df["is_anomaly"] = np.full(len(self.result_df), None)
+        self.result_df[ANOMALIES_COLUMN] = np.full(len(self.result_df), False)
+        self.result_df[ANOM_SCORE_COLUMN] = calculate_anomaly_score(self.result_df["residuals"])
 
         logging.debug("SARIMA anomaly threshold set to: " + str(self.threshold))
 
     def test(self, test_df: pd.DataFrame) -> pd.DataFrame:
         forecast = self.model_results.forecast(len(test_df))
-        residuals = test_df.values.squeeze() - forecast
-        absolute_error = np.abs(residuals)
+        resid = np.abs(forecast - test_df.to_numpy().flatten())
 
-        anomalies = absolute_error > self.threshold
-        for anom_idx in np.where(anomalies)[0]:
-            logging.debug(f"Anomaly detected at idx: {anom_idx}. Forecasting error: {absolute_error[anom_idx]}")
-        temp_df = test_df.copy()
-        temp_df["predictions"] = forecast
-        temp_df["pred_err"] = absolute_error
-        temp_df["is_anomaly"] = anomalies
-
-        self.result_df = pd.concat([self.result_df, temp_df])
-
-        if np.any(anomalies):
+        if np.any(self.result_df.iloc[-len(forecast):][ANOMALIES_COLUMN]):
             self.model_results = self.model_results.append(forecast)
         else:
             self.model_results = self.model_results.append(test_df.values)
+
+        temp_df = test_df.copy()
+        temp_df[PREDICTIONS_COLUMN] = forecast
+
+        self.result_df = pd.concat([self.result_df, temp_df])
+        self.result_df.loc[-len(forecast):, "residuals"] = resid
+        self.result_df.loc[-len(forecast):, ANOM_SCORE_COLUMN] = calculate_anomaly_score(self.result_df["residuals"])[
+                                                                 -len(forecast):]
+        self.result_df[ANOMALIES_COLUMN].iloc[-len(forecast):] = self.result_df.iloc[-len(forecast):][
+                                                                     ANOM_SCORE_COLUMN].to_numpy().flatten() > 0.9
 
         return self.result_df

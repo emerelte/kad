@@ -10,6 +10,13 @@ PromQueryResponse = List[dict]
 
 TIME_STEPS = 40
 
+PREDICTIONS_COLUMN: str = "predictions"
+ANOMALIES_COLUMN: str = "is_anomaly"
+GROUND_TRUTH_COLUMN: str = "gt_is_anomaly"
+ANOM_SCORE_COLUMN: str = "anom_score"
+
+X_LABEL: str = "timestamp"
+
 
 def get_dummy_data():
     daily_jumpsup_csv_path = "notebooks/data/archive/artificialWithAnomaly/artificialWithAnomaly/art_daily_jumpsup.csv"
@@ -57,7 +64,6 @@ def normalize(values: pd.DataFrame, mean: float, std: float):
     return values
 
 
-# ADF utils
 def get_statistic_test(adf) -> float:
     return adf[0]
 
@@ -78,6 +84,14 @@ def print_adf_results(adf):
     print("No of observation: ", adf[3])
     for key, value in get_critical_values(adf).items():
         print(f" critical value {key} : {value}")
+
+
+def calculate_anomaly_score(residuals: pd.Series, initial_threshold: float = 1):
+    max_resid = np.nanmax(np.array(residuals.values, dtype=np.float64))
+    if max_resid is None:
+        max_resid = 1
+    scaler = MinMaxScaler(feature_range=(0, max_resid/initial_threshold))
+    return scaler.fit_transform(residuals.values.reshape(-1, 1))
 
 
 class EndpointAction(object):
