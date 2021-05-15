@@ -91,10 +91,11 @@ def calculate_anomaly_score(residuals: pd.Series, initial_threshold: float = 1.0
     max_resid = np.nanmax(np.array(residuals.values, dtype=np.float64))
     if max_resid is None:
         max_resid = 1
-    scaler = MinMaxScaler(feature_range=(0, max_resid/initial_threshold))
+    scaler = MinMaxScaler(feature_range=(0, max_resid / initial_threshold))
     anom_scores = scaler.fit_transform(residuals.values.reshape(-1, 1))
     anom_scores[anom_scores > 1.0] = 1.0
     return anom_scores.flatten()
+
 
 class EndpointAction(object):
     """

@@ -60,13 +60,13 @@ class TsAnalyzer:
         y_fft = fft(self.data.to_numpy().flatten())
         y_fft = np.abs(y_fft[0:N // divisor])
 
-        fig = plt.figure(figsize=(20, 10))
-        ax = fig.add_subplot(111)
-        plt.plot(x_fft, 2.0 / N * y_fft)
-
-        plt.title("FFT")
-        ax.tick_params(axis="x", labelsize=22)
-        ax.tick_params(axis="y", labelsize=22)
-        plt.show()
+        # fig = plt.figure(figsize=(20, 10))
+        # ax = fig.add_subplot(111)
+        # plt.plot(x_fft, 2.0 / N * y_fft)
+        #
+        # plt.title("FFT")
+        # ax.tick_params(axis="x", labelsize=22)
+        # ax.tick_params(axis="y", labelsize=22)
+        # plt.show()
 
         return round(1 / (T * x_fft[np.argsort(-y_fft)[1]]))

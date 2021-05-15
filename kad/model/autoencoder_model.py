@@ -50,12 +50,14 @@ class AutoEncoderModel(IModel):
         self.nn.compile(optimizer=keras.optimizers.Adam(learning_rate=0.001), loss="mse")
         self.nn.summary()
 
-    """
-    Takes training dataframe as input and computes internal states that will be used to predict the test data classes
-    """
-
     def train(self, train_df: pd.DataFrame):
-        logging.debug("TRAIN CALLED")
+        """
+        @:param train_df: training data frame
+        Takes training dataframe and:
+            - fits the model
+        """
+
+        logging.debug("Autoencoder model training started")
         self.initialize_nn(train_df)
 
         history = self.nn.fit(
@@ -117,7 +119,7 @@ class AutoEncoderModel(IModel):
         self.result_df = pd.concat([self.result_df, temp_df])
         self.result_df.loc[-len(x_test):, "residuals"] = test_mae_loss
         self.result_df.loc[-len(x_test):, ANOM_SCORE_COLUMN] = calculate_anomaly_score(self.result_df["residuals"])[
-                                                                 -len(x_test):]
+                                                               -len(x_test):]
 
         logging.debug("Autoencoder ended testing!")
         return self.result_df
