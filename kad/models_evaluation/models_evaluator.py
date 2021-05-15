@@ -14,7 +14,7 @@ class ModelsEvaluator:
         self.df = df
 
     def get_accuracy(self):
-        return metrics.accuracy_score(y_true=self.df[GROUND_TRUTH_COLUMN], y_pred=self.df[ANOMALIES_COLUMN])
+        return round(metrics.accuracy_score(y_true=self.df[GROUND_TRUTH_COLUMN], y_pred=self.df[ANOMALIES_COLUMN]), 2)
 
     def plot_confusion_matrix(self):
         cm = metrics.confusion_matrix(y_true=self.df[GROUND_TRUTH_COLUMN], y_pred=self.df[ANOMALIES_COLUMN])
@@ -32,10 +32,14 @@ class ModelsEvaluator:
         plt.ylabel("Precision")
 
     def get_average_precision(self):
-        return metrics.average_precision_score(y_true=self.df[GROUND_TRUTH_COLUMN], y_score=self.df[ANOM_SCORE_COLUMN])
+        return round(metrics.average_precision_score(y_true=self.df[GROUND_TRUTH_COLUMN], y_score=self.df[ANOM_SCORE_COLUMN]), 2)
+
+    def get_recall_score(self):
+        return round(metrics.recall_score(y_true=self.df[GROUND_TRUTH_COLUMN], y_pred=self.df[ANOMALIES_COLUMN]), 2)
 
     def plot_roc(self):
-        fpr, tpr, thresholds = metrics.roc_curve(y_true=self.df[GROUND_TRUTH_COLUMN], y_score=self.df[ANOM_SCORE_COLUMN])
+        fpr, tpr, thresholds = metrics.roc_curve(y_true=self.df[GROUND_TRUTH_COLUMN],
+                                                 y_score=self.df[ANOM_SCORE_COLUMN])
         area_under_roc = metrics.auc(fpr, tpr)
 
         plt.figure(figsize=(20, 10))

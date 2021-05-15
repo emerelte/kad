@@ -14,6 +14,7 @@ PREDICTIONS_COLUMN: str = "predictions"
 ANOMALIES_COLUMN: str = "is_anomaly"
 GROUND_TRUTH_COLUMN: str = "gt_is_anomaly"
 ANOM_SCORE_COLUMN: str = "anom_score"
+ERROR_COLUMN: str = "error"
 
 X_LABEL: str = "timestamp"
 
@@ -86,13 +87,14 @@ def print_adf_results(adf):
         print(f" critical value {key} : {value}")
 
 
-def calculate_anomaly_score(residuals: pd.Series, initial_threshold: float = 1):
+def calculate_anomaly_score(residuals: pd.Series, initial_threshold: float = 1.0):
     max_resid = np.nanmax(np.array(residuals.values, dtype=np.float64))
     if max_resid is None:
         max_resid = 1
     scaler = MinMaxScaler(feature_range=(0, max_resid/initial_threshold))
-    return scaler.fit_transform(residuals.values.reshape(-1, 1))
-
+    anom_scores = scaler.fit_transform(residuals.values.reshape(-1, 1))
+    anom_scores[anom_scores > 1.0] = 1.0
+    return anom_scores.flatten()
 
 class EndpointAction(object):
     """
