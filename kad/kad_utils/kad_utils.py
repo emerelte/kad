@@ -50,6 +50,22 @@ def embed_data(data: np.ndarray, steps: int):
     return embedded_data[:, :, np.newaxis], labels[:, np.newaxis]
 
 
+def calculate_original_indexes(embedded_data_len: int, steps: int):
+    ind_list = []
+    init_idx = [0 if i < steps else i - steps for i in range(embedded_data_len + steps)]
+
+    for i in range(embedded_data_len + steps):
+        ind_list.append([i for i in range(init_idx[i], min(i + 1, embedded_data_len))])
+    return ind_list
+
+
+def decode_data(embedded_data: np.ndarray, original_indexes: list):
+    original_data = np.array([])
+    for i in range(len(original_indexes)):
+        original_data = np.append(original_data, embedded_data[original_indexes[i]].mean())
+    return original_data
+
+
 def create_sequences(values, time_steps=TIME_STEPS):
     output = []
 

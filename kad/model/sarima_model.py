@@ -34,6 +34,7 @@ class SarimaModel(i_model.IModel):
                 b) forecast error
                 c) threshold set to 2*max(forecast error) which is used in testing part to calculate the anomaly score
         """
+
         with warnings.catch_warnings():
             warnings.simplefilter('ignore')
 
@@ -67,7 +68,7 @@ class SarimaModel(i_model.IModel):
 
     def test(self, test_df: pd.DataFrame) -> pd.DataFrame:
         with warnings.catch_warnings():
-            warnings.simplefilter('ignore')
+            warnings.simplefilter("ignore")
 
             forecast = self.model_results.forecast(len(test_df))
             abs_error = np.abs(forecast - test_df.to_numpy().flatten())
