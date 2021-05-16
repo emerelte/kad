@@ -1,4 +1,5 @@
 import logging
+import warnings
 from typing import List
 
 import numpy as np
@@ -9,7 +10,8 @@ from tensorflow.keras import layers
 from kad.kad_utils import kad_utils
 from matplotlib import pyplot as plt
 
-from kad.kad_utils.kad_utils import ANOM_SCORE_COLUMN, ANOMALIES_COLUMN, PREDICTIONS_COLUMN
+from kad.kad_utils.kad_utils import ANOM_SCORE_COLUMN, ANOMALIES_COLUMN, PREDICTIONS_COLUMN, ERROR_COLUMN, \
+    calculate_anomaly_score
 from kad.model.i_model import IModel, ModelException
 
 
@@ -23,7 +25,7 @@ class LstmModel(IModel):
         self.threshold = None
         self.time_steps = time_steps
         self.batch_size = batch_size
-        self.result_df = None
+        self.results_df = None
         self.x_train: np.ndarray = None
         self.y_train: np.ndarray = None
         self.nn = None
@@ -50,31 +52,41 @@ class LstmModel(IModel):
         """
         Takes training dataframe as input and computes internal states that will be used to predict the test data classes
         """
-        logging.debug("TRAIN CALLED")
-        self.__initialize_nn(train_df)
 
-        history = self.nn.fit(
-            self.x_train,
-            self.y_train,
-            epochs=50,
-            batch_size=self.batch_size,
-            validation_split=0.5,
-            callbacks=[
-                keras.callbacks.EarlyStopping(monitor="val_loss", patience=5, mode="min")
-            ],
-        )
+        logging.debug("LSTM TRAIN CALLED")
 
-        plt.plot(history.history["loss"], label="Training Loss")
-        plt.plot(history.history["val_loss"], label="Validation Loss")
-        plt.legend()
-        plt.show()
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
 
-        forecast = self.nn.predict(self.x_train)
-        train_mae_loss = np.mean(np.abs(forecast - self.y_train), axis=1)
-        self.threshold = np.max(train_mae_loss)
-        self.result_df = train_df.copy()
-        self.result_df.loc[-len(forecast):, PREDICTIONS_COLUMN] = forecast
-        self.result_df[ANOMALIES_COLUMN] = False
+            self.__initialize_nn(train_df)
+
+            history = self.nn.fit(
+                self.x_train,
+                self.y_train,
+                epochs=50,
+                batch_size=self.batch_size,
+                validation_split=0.5,
+                callbacks=[
+                    keras.callbacks.EarlyStopping(monitor="val_loss", patience=5, mode="min")
+                ],
+            )
+
+            plt.plot(history.history["loss"], label="Training Loss")
+            plt.plot(history.history["val_loss"], label="Validation Loss")
+            plt.legend()
+            plt.show()
+
+            forecast = self.nn.predict(self.x_train)
+            train_mae_loss = np.mean(np.abs(forecast - self.y_train), axis=1)
+
+            original_indexes = kad_utils.calculate_original_indexes(len(self.x_train), self.time_steps)
+
+            self.threshold = np.max(train_mae_loss)
+            self.results_df = train_df.copy()
+            self.results_df.loc[-len(forecast):, PREDICTIONS_COLUMN] = forecast
+            self.results_df[ANOMALIES_COLUMN] = False
+            self.results_df[ERROR_COLUMN] = kad_utils.decode_data(train_mae_loss, original_indexes)
+            self.results_df[ANOM_SCORE_COLUMN] = calculate_anomaly_score(self.results_df[ERROR_COLUMN])
 
     def test(self, test_df: pd.DataFrame):
         """
@@ -83,32 +95,36 @@ class LstmModel(IModel):
 
         logging.debug("LSTM Model tests!")
 
-        if self.x_train is None or self.nn is None:
-            raise ModelException("Model not trained, cannot test")
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
 
-        extended_test_df = np.concatenate((self.result_df[test_df.columns[0]].to_numpy()[-self.time_steps:],
-                                           test_df.to_numpy().flatten()))
+            if self.x_train is None or self.nn is None:
+                raise ModelException("Model not trained, cannot test")
 
-        x_test, y_test = kad_utils.embed_data(data=extended_test_df, steps=self.time_steps)
+            extended_test_df = np.concatenate((self.results_df[test_df.columns[0]].to_numpy()[-self.time_steps:],
+                                               test_df.to_numpy().flatten()))
 
-        forecast = self.nn.predict(x_test)
-        residuals = test_df.values.squeeze() - forecast.flatten()
-        absolute_error = np.abs(residuals)
+            x_test, y_test = kad_utils.embed_data(data=extended_test_df, steps=self.time_steps)
 
-        anomalies = absolute_error > self.threshold
-        for anom_idx in np.where(anomalies)[0]:
-            logging.debug(f"Anomaly detected at idx: {anom_idx}. Forecasting error: {absolute_error[anom_idx]}")
+            forecast = self.nn.predict(x_test)
+            residuals = test_df.values.squeeze() - forecast.flatten()
+            absolute_error = np.abs(residuals)
 
-        temp_df = test_df.copy()
-        temp_df["is_anomaly"] = anomalies
-        temp_df.loc[-len(forecast):, "residuals"] = absolute_error
-        temp_df.loc[-len(forecast):, "predictions"] = forecast
+            anomalies = absolute_error > self.threshold
+            for anom_idx in np.where(anomalies)[0]:
+                logging.debug(f"Anomaly detected at idx: {anom_idx}. Forecasting error: {absolute_error[anom_idx]}")
 
-        self.result_df = pd.concat([self.result_df, temp_df])
-        self.result_df[-len(forecast):, ANOM_SCORE_COLUMN] = kad_utils.calculate_anomaly_score(self.result_df["residuals"])[-len(forecast):]
+            temp_df = test_df.copy()
+            temp_df["is_anomaly"] = anomalies
+            temp_df.loc[-len(forecast):, "residuals"] = absolute_error
+            temp_df.loc[-len(forecast):, "predictions"] = forecast
 
-        self.__update_threshold()
+            self.results_df = pd.concat([self.results_df, temp_df])
+            self.results_df.loc[:, ANOM_SCORE_COLUMN].iloc[-len(forecast):] = kad_utils.calculate_anomaly_score(
+                self.results_df["residuals"])[-len(forecast):]
 
-        logging.debug("LSTM Model ended testing!")
+            self.__update_threshold()
 
-        return self.result_df
+            logging.debug("LSTM Model ended testing!")
+
+            return self.results_df

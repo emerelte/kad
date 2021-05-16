@@ -29,7 +29,7 @@ class AutoEncoderModel(IModel):
 
     @staticmethod
     def __calculate_threshold(valid_errors: np.ndarray) -> float:
-        return np.max(valid_errors)
+        return 2 * np.max(valid_errors)
 
     def __initialize_nn(self, train_df: pd.DataFrame):
         self.results_df = train_df
@@ -71,17 +71,20 @@ class AutoEncoderModel(IModel):
 
             self.__initialize_nn(train_df)
 
+            validation_size = 0.1
+
             history = self.nn.fit(
                 self.x_train,
                 self.x_train,
                 epochs=50,
                 batch_size=self.batch_size,
-                validation_split=0.1,
+                validation_split=validation_size,
                 callbacks=[
                     keras.callbacks.EarlyStopping(monitor="val_loss", patience=5, mode="min")
                 ],
             )
 
+            plt.figure()
             plt.plot(history.history["loss"], label="Training Loss")
             plt.plot(history.history["val_loss"], label="Validation Loss")
             plt.legend()
@@ -90,11 +93,15 @@ class AutoEncoderModel(IModel):
             x_train_pred = self.nn.predict(self.x_train)
             train_mae_loss = np.mean(np.abs(x_train_pred - self.x_train), axis=1)
 
-            self.results_df[ERROR_COLUMN] = np.append(np.array([None for _ in range(self.time_steps)]), train_mae_loss)
-            self.results_df[ANOM_SCORE_COLUMN] = calculate_anomaly_score(self.results_df[ERROR_COLUMN])
-            self.results_df[kad_utils.ANOMALIES_COLUMN] = np.full(len(self.results_df), False)
+            original_indexes = kad_utils.calculate_original_indexes(len(self.x_train), self.time_steps)
 
-            self.error_threshold = self.__calculate_threshold(train_mae_loss)
+            self.results_df[kad_utils.PREDICTIONS_COLUMN] = kad_utils.decode_data(x_train_pred, original_indexes)
+            self.results_df[ERROR_COLUMN] = kad_utils.decode_data(train_mae_loss, original_indexes)
+            self.results_df[ANOM_SCORE_COLUMN] = calculate_anomaly_score(self.results_df[ERROR_COLUMN])
+            self.results_df[kad_utils.ANOMALIES_COLUMN] = np.full(len(self.results_df), False, dtype=bool)
+
+            self.error_threshold = self.__calculate_threshold(
+                train_mae_loss[-int(len(train_mae_loss) * 0.5):])
 
     def test(self, test_df: pd.DataFrame):
         """
@@ -121,12 +128,15 @@ class AutoEncoderModel(IModel):
             test_mae_loss = np.mean(np.abs(x_test_pred - x_test), axis=1).reshape((-1))
 
             self.results_df = pd.concat([self.results_df, test_df.copy()])
+            self.results_df.loc[:, kad_utils.PREDICTIONS_COLUMN].iloc[-len(test_df):] = \
+                kad_utils.decode_data(x_test_pred, original_indexes)
             self.results_df.loc[-len(test_df):, ERROR_COLUMN] = kad_utils.decode_data(test_mae_loss, original_indexes)
             self.results_df.loc[-len(test_df):, ANOM_SCORE_COLUMN] = \
                 calculate_anomaly_score(self.results_df[ERROR_COLUMN], self.error_threshold)[-len(test_df):]
-            self.results_df.loc[-len(test_df):, ANOMALIES_COLUMN] = \
-                self.results_df[kad_utils.ANOM_SCORE_COLUMN].iloc[-len(test_df):].to_numpy().flatten() \
-                >= self.anomaly_score_threshold
+            self.results_df.loc[:, ANOMALIES_COLUMN].iloc[-len(test_df):] = \
+                np.any(self.results_df[kad_utils.ANOM_SCORE_COLUMN].iloc[
+                       -len(test_df):].to_numpy().flatten() > self.anomaly_score_threshold)
+            self.results_df[ANOMALIES_COLUMN] = self.results_df[ANOMALIES_COLUMN].astype("bool")
 
             logging.debug("Autoencoder ended testing!")
 

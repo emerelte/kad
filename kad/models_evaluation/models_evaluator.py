@@ -38,6 +38,11 @@ class ModelsEvaluator:
     def get_recall_score(self):
         return round(metrics.recall_score(y_true=self.df[GROUND_TRUTH_COLUMN], y_pred=self.df[ANOMALIES_COLUMN]), 2)
 
+    def get_auroc(self):
+        fpr, tpr, thresholds = metrics.roc_curve(y_true=self.df[GROUND_TRUTH_COLUMN],
+                                                 y_score=self.df[ANOM_SCORE_COLUMN])
+        return round(metrics.auc(fpr, tpr), 2)
+
     def plot_roc(self):
         fpr, tpr, thresholds = metrics.roc_curve(y_true=self.df[GROUND_TRUTH_COLUMN],
                                                  y_score=self.df[ANOM_SCORE_COLUMN])
@@ -46,7 +51,6 @@ class ModelsEvaluator:
         plt.figure(figsize=(20, 10))
         plt.plot(fpr, tpr, color="r", lw=2, label="ROC curve")
         plt.plot([0, 1], [0, 1], color="k", lw=2, linestyle="--")
-        plt.xlim([0.0, 1.0])
         plt.xlim([0.0, 1.05])
         plt.xlabel("False positive rate")
         plt.xlabel("True positive rate")

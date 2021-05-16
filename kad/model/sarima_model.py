@@ -81,6 +81,7 @@ class SarimaModel(i_model.IModel):
             self.results_df.loc[:, kad_utils.ANOMALIES_COLUMN].iloc[-len(forecast):] = \
                 np.any(self.results_df[kad_utils.ANOM_SCORE_COLUMN].iloc[-len(forecast):]
                        .to_numpy().flatten() >= self.anomaly_score_threshold)
+            self.results_df[kad_utils.ANOMALIES_COLUMN] = self.results_df[kad_utils.ANOMALIES_COLUMN].astype("bool")
 
             if np.any(self.results_df.iloc[-len(forecast):][kad_utils.ANOMALIES_COLUMN]):
                 self.model_results = self.model_results.append(forecast)
