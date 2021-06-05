@@ -36,22 +36,12 @@ class AutoEncoderModel(IModel):
         self.x_train, _ = kad_utils.embed_data(data=train_df.to_numpy().flatten(), steps=self.time_steps)
         self.nn = keras.Sequential(
             [
-                layers.Input(shape=(self.x_train.shape[1], self.x_train.shape[2])),
-                layers.Conv1D(
-                    filters=32, kernel_size=7, padding="same", strides=2, activation="relu"
-                ),
+                layers.LSTM(128, input_shape=(self.x_train.shape[1], self.x_train.shape[2])),
                 layers.Dropout(rate=0.2),
-                layers.Conv1D(
-                    filters=16, kernel_size=7, padding="same", strides=2, activation="relu"
-                ),
-                layers.Conv1DTranspose(
-                    filters=16, kernel_size=7, padding="same", strides=2, activation="relu"
-                ),
+                layers.RepeatVector(self.x_train.shape[1]),
+                layers.LSTM(128, return_sequences=True),
                 layers.Dropout(rate=0.2),
-                layers.Conv1DTranspose(
-                    filters=32, kernel_size=7, padding="same", strides=2, activation="relu"
-                ),
-                layers.Conv1DTranspose(filters=1, kernel_size=7, padding="same"),
+                layers.TimeDistributed(layers.Dense(self.x_train.shape[2])),
             ]
         )
         self.nn.compile(optimizer=keras.optimizers.Adam(learning_rate=self.lr), loss="mse")

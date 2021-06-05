@@ -78,7 +78,7 @@ def create_sequences(values, time_steps=TIME_STEPS):
 def normalize(values: pd.DataFrame, mean: float, std: float):
     values -= mean
     values /= std
-    return values
+    return values.fillna(0)
 
 
 def get_statistic_test(adf) -> float:

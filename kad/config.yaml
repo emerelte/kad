@@ -1,0 +1,9 @@
+PROMETHEUS_URL: "http://127.0.0.1:9090"
+START_TIME: datetime.datetime.strptime("2021-06-05 12:05:00", "%Y-%m-%d %H:%M:%S")
+END_TIME: datetime.datetime.strptime("2021-06-05 12:12:00", "%Y-%m-%d %H:%M:%S")
+METRIC_NAME: "request_duration_seconds_count"
+QUERY: 'rate(request_duration_seconds_count{name="front-end",status_code="200",route="/catalogue"}[1m])'
+APP_URL: "http://localhost:5000/"
+UPDATE_DATA_ENDPOINT: "update_data"
+PLOT_RESULTS_ENDPOINT: "plot_results"
+UPDATE_INTERVAL_SEC: 10
