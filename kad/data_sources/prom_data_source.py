@@ -33,6 +33,9 @@ class PrometheusDataSource(IDataSource):
         self.basic_timedelta = last_timestamps[1] - last_timestamps[0]
 
     def get_train_data(self) -> pd.DataFrame:
+        logging.info("Executing query: " + self.query)
+        logging.info("Start time: " + str(self.start_time))
+        logging.info("Stop time: " + str(self.stop_time))
         metric_range = self.prom.perform_query(query=self.query,
                                                start_time=self.start_time,
                                                end_time=self.stop_time)
