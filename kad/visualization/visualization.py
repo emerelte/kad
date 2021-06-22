@@ -1,3 +1,5 @@
+import datetime
+
 import pandas as pd
 import numpy as np
 from matplotlib import pyplot as plt
@@ -5,8 +7,8 @@ from kad.kad_utils.kad_utils import X_LABEL, PREDICTIONS_COLUMN, ANOMALIES_COLUM
     ANOM_SCORE_COLUMN
 
 
-def visualize(results_df: pd.DataFrame, metric_name: str, title: str = "Anomaly visualization",
-              train_ratio: float = 0.15):
+def visualize(results_df: pd.DataFrame, metric_name: str, last_train_sample: int = None,
+              title: str = "Anomaly visualization"):
     results_df.index = results_df.index.set_names([X_LABEL])
 
     fig = plt.figure()
@@ -15,8 +17,9 @@ def visualize(results_df: pd.DataFrame, metric_name: str, title: str = "Anomaly 
     results_df[metric_name].plot.line(ax=ax)
     columns_labels: list = ["Actual TS"]
 
-    ax.axvspan(results_df.index[0], results_df.index[int(len(results_df) * train_ratio)], alpha=0.5, color="gray")
-    columns_labels.append("Training part")
+    if last_train_sample is not None:
+        ax.axvspan(results_df.index[0], results_df.index[last_train_sample], alpha=0.5, color="gray")
+        columns_labels.append("Training part")
 
     if PREDICTIONS_COLUMN in results_df and np.any(results_df[PREDICTIONS_COLUMN]):
         results_df.reset_index().plot.scatter(
@@ -64,4 +67,3 @@ def visualize(results_df: pd.DataFrame, metric_name: str, title: str = "Anomaly 
             kind="bar")
         ax2.axes.get_xaxis().set_visible(False)
         ax2.axes.set_ylabel("anomaly score")
-        ax2.axvspan(results_df.index[0], results_df.index[int(len(results_df) * train_ratio)], alpha=0.5, color="gray")

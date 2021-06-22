@@ -54,7 +54,7 @@ class AutoEncoderModel(IModel):
             - fits the model
         """
 
-        logging.debug("Autoencoder model training started")
+        logging.info("Autoencoder model training started")
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
@@ -98,7 +98,7 @@ class AutoEncoderModel(IModel):
         Appends a column to the df with classes
         """
 
-        logging.debug("Autoencoder tests!")
+        logging.info("Autoencoder tests!")
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
@@ -128,6 +128,6 @@ class AutoEncoderModel(IModel):
                        -len(test_df):].to_numpy().flatten() > self.anomaly_score_threshold)
             self.results_df[ANOMALIES_COLUMN] = self.results_df[ANOMALIES_COLUMN].astype("bool")
 
-            logging.debug("Autoencoder ended testing!")
+            logging.info("Autoencoder ended testing!")
 
             return self.results_df

@@ -64,7 +64,7 @@ class SarimaModel(i_model.IModel):
             self.results_df.loc[:, kad_utils.PREDICTIONS_COLUMN].iloc[-len(valid_df):] = forecast
             self.results_df.loc[:, kad_utils.ERROR_COLUMN].iloc[-len(valid_df):] = abs_error
 
-            logging.debug("SARIMA anomaly threshold set to: " + str(self.error_threshold))
+            logging.info("SARIMA anomaly threshold set to: " + str(self.error_threshold))
 
     def test(self, test_df: pd.DataFrame) -> pd.DataFrame:
         with warnings.catch_warnings():

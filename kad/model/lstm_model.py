@@ -53,7 +53,7 @@ class LstmModel(IModel):
         Takes training dataframe as input and computes internal states that will be used to predict the test data classes
         """
 
-        logging.debug("LSTM TRAIN CALLED")
+        logging.info("LSTM TRAIN CALLED")
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
@@ -93,7 +93,7 @@ class LstmModel(IModel):
         Appends a column to the df with classes
         """
 
-        logging.debug("LSTM Model tests!")
+        logging.info("LSTM Model tests!")
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
@@ -112,7 +112,7 @@ class LstmModel(IModel):
 
             anomalies = absolute_error > self.threshold
             for anom_idx in np.where(anomalies)[0]:
-                logging.debug(f"Anomaly detected at idx: {anom_idx}. Forecasting error: {absolute_error[anom_idx]}")
+                logging.info(f"Anomaly detected at idx: {anom_idx}. Forecasting error: {absolute_error[anom_idx]}")
 
             temp_df = test_df.copy()
             temp_df["is_anomaly"] = anomalies
@@ -125,6 +125,6 @@ class LstmModel(IModel):
 
             self.__update_threshold()
 
-            logging.debug("LSTM Model ended testing!")
+            logging.info("LSTM Model ended testing!")
 
             return self.results_df

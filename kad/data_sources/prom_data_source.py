@@ -37,10 +37,8 @@ class PrometheusDataSource(IDataSource):
                                                start_time=self.start_time,
                                                end_time=self.stop_time)
 
-        print(metric_range)
         metric = response_validator.validate(metric_range)
         train_df = metric_parser.metric_to_dataframe(metric, self.metric_name).astype(float)
-        print(train_df)
         self.set_basic_timedelta(train_df)
         self.update_next_timestamp(train_df)
 
@@ -54,6 +52,9 @@ class PrometheusDataSource(IDataSource):
         whole_df = metric_parser.metric_to_dataframe(metric, self.metric_name).astype(float)
         new_data = whole_df.loc[
                    self.next_timestamp:self.next_timestamp + datetime.timedelta(seconds=self.update_interval_sec)]
+
+        if len(new_data) < 1:
+            raise DataSourceException("No new data to fetch")
 
         self.update_next_timestamp(new_data)
         return new_data
