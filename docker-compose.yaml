@@ -9,3 +9,28 @@ services:
     volumes:
       - "./secret:/home/secret"
       - "./microservices-demo-master:/home/demo_app"
+  minikube-cluster:
+    container_name: "minikube-cluster"
+    build: minikube_cluster/.
+    ports:
+      - "35437:35437"
+      - "9090:9090"
+      - "30001:30001"
+      - "31300:31300"
+    privileged: true
+    volumes:
+      - "./secret:/home/secret"
+      - "./microservices-demo-master:/home/demo_app"
+  kad:
+    container_name: "kad"
+    build: kad/.
+    network_mode: "host" # FIXME - unsafe
+    privileged: true
+  load-test:
+    container_name: "load-test"
+    build:
+      load_test/.
+    network_mode: "host"
+    privileged: true
+    volumes:
+      - "./load_test:/config"
