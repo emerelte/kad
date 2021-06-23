@@ -58,7 +58,7 @@ kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/v2.0.0/a
 #echo "Installing Prometheus"
 
 #helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
-#helm repo add stable https://kubernetes-charts.storage.googleapis.com/
+#helm repo add stable https://kubernetes-charts.storage.googleapis.com/ # helm repo add stable https://charts.helm.sh/stable ?
 #helm repo update
 #helm install prometheus prometheus-community/kube-prometheus-stack --version "9.4.1"
 #kubectl wait --for=condition=ready pod -l app=netshoot
@@ -66,12 +66,10 @@ kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/v2.0.0/a
 
 echo "Starting sock-shop"
 
-kubectl create namespace sock-shop
-kubectl apply -f ./demo_app/deploy/kubernetes/complete-demo.yaml
+kubectl create -f ./demo_app/deploy/kubernetes/complete-demo.yaml
 
 echo "Starting monitoring"
 
-kubectl create namespace monitoring
 kubectl create -f ./demo_app/deploy/kubernetes/manifests-monitoring
 
 # TODO some smart solution for automatic port-forward

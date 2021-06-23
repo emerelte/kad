@@ -149,7 +149,7 @@ if __name__ == "__main__":
     RETRY_INTERV = 10
 
     while 1:
-        with open("kad/config.yaml", 'r') as stream:
+        with open("kad/config/config.yaml", 'r') as stream:
             try:
                 config = yaml.safe_load(stream)
             except yaml.YAMLError as exc:
