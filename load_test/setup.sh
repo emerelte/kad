@@ -7,4 +7,4 @@ echo "Building load-test docker image"
 docker build -t load-test .
 
 echo "Starting load test"
-kubectl apply -f non-anomalous.yaml
+kubectl apply -f loadtest-deployment.yaml
