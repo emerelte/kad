@@ -1,5 +1,6 @@
 import io
 import datetime
+import json
 import logging
 import os
 from time import sleep
@@ -12,7 +13,7 @@ sys.path.insert(1, "..")
 from apscheduler.schedulers.background import BackgroundScheduler
 from matplotlib import pyplot as plt
 import pandas as pd
-from flask import Flask, send_file, Response
+from flask import Flask, send_file, Response, jsonify
 from flask_cors import cross_origin
 
 from kad.data_processing import response_validator
@@ -43,24 +44,24 @@ class KAD(object):
     def __init__(self, p_config: dict):
         self.app = Flask("KAD app")
 
-        # file = "data/archive/artificialWithAnomaly/artificialWithAnomaly/art_daily_jumpsup.csv"
-        # daily_jumpsup_csv_path = os.path.join(
-        #     "/home/maciek/Documents/Magisterka/kubernetes-anomaly-detector/notebooks/",
-        #     file)
-        #
-        # self.data_source: i_data_source = ExemplaryDataSource(
-        #     path=daily_jumpsup_csv_path,
-        #     metric_name=p_config["METRIC_NAME"],
-        #     start_time=datetime.datetime.strptime("2014-04-01 14:00:00", "%Y-%m-%d %H:%M:%S"),
-        #     stop_time=datetime.datetime.strptime("2014-04-09 14:00:00", "%Y-%m-%d %H:%M:%S"),
-        #     update_interval_hours=10)
+        file = "data/archive/artificialWithAnomaly/artificialWithAnomaly/art_daily_jumpsup.csv"
+        daily_jumpsup_csv_path = os.path.join(
+            "/home/maciek/Documents/Magisterka/kubernetes-anomaly-detector/notebooks/",
+            file)
 
-        self.data_source: i_data_source = PrometheusDataSource(query=p_config["QUERY"],
-                                                               prom_url=p_config["PROMETHEUS_URL"],
-                                                               metric_name=p_config["METRIC_NAME"],
-                                                               start_time=eval(p_config["START_TIME"]),
-                                                               stop_time=eval(p_config["END_TIME"]),
-                                                               update_interval_sec=p_config["UPDATE_INTERVAL_SEC"])
+        self.data_source: i_data_source = ExemplaryDataSource(
+            path=daily_jumpsup_csv_path,
+            metric_name=p_config["METRIC_NAME"],
+            start_time=datetime.datetime.strptime("2014-04-01 14:00:00", "%Y-%m-%d %H:%M:%S"),
+            stop_time=datetime.datetime.strptime("2014-04-09 14:00:00", "%Y-%m-%d %H:%M:%S"),
+            update_interval_hours=10)
+
+        # self.data_source: i_data_source = PrometheusDataSource(query=p_config["QUERY"],
+        #                                                        prom_url=p_config["PROMETHEUS_URL"],
+        #                                                        metric_name=p_config["METRIC_NAME"],
+        #                                                        start_time=eval(p_config["START_TIME"]),
+        #                                                        stop_time=eval(p_config["END_TIME"]),
+        #                                                        update_interval_sec=p_config["UPDATE_INTERVAL_SEC"])
         # self.model: i_model.IModel = SarimaModel(order=(0, 0, 0), seasonal_order=(1, 0, 1, 24))
         # self.model: i_model.IModel = AutoEncoderModel(time_steps=12)
         self.model: i_model.IModel = HmmModel()
@@ -118,6 +119,17 @@ class KAD(object):
                          mimetype="image/png")
 
     @cross_origin(supports_credentials=True)
+    def get_results(self):
+        logging.info("Results in raw format requested")
+
+        if self.results_df is None:
+            logging.warning("Results not obtained yet")
+            return None
+
+        print(self.results_df.to_json())
+        return jsonify(json.loads(self.results_df.to_json()))
+
+    @cross_origin(supports_credentials=True)
     def update_data(self):
         logging.info("Updating data")
 
@@ -165,9 +177,14 @@ if __name__ == "__main__":
 
             kad.train_model(train_df)
 
-            kad.add_endpoint(endpoint="/" + config["PLOT_RESULTS_ENDPOINT"], endpoint_name="plot_results",
+            kad.add_endpoint(endpoint="/" + config["PLOT_RESULTS_ENDPOINT"],
+                             endpoint_name=config["PLOT_RESULTS_ENDPOINT"],
                              handler=kad.plot_results)
-            kad.add_endpoint(endpoint="/" + config["UPDATE_DATA_ENDPOINT"], endpoint_name="update_data",
+            kad.add_endpoint(endpoint="/" + config["GET_RESULTS_ENDPOINT"],
+                             endpoint_name=config["GET_RESULTS_ENDPOINT"],
+                             handler=kad.get_results)
+            kad.add_endpoint(endpoint="/" + config["UPDATE_DATA_ENDPOINT"],
+                             endpoint_name=config["UPDATE_DATA_ENDPOINT"],
                              handler=kad.update_data)
 
             scheduler = BackgroundScheduler()

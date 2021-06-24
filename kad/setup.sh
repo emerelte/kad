@@ -13,7 +13,7 @@ echo "Starting KAD"
 kubectl apply -f kad-deployment.yaml
 
 echo "Applying service"
-kubectl apply -f kad-svc.yaml
+kubectl apply -f kad-service.yaml
 
 echo "Waiting for pods to be ready"
 kubectl wait --for=condition=ready pod -n kad --all --timeout=120s
