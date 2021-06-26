@@ -1,7 +1,16 @@
-import React, {Component} from 'react';
-import axios from 'axios';
+import React, {Component} from "react";
+import axios from "axios";
+import {
+    Line,
+    Tooltip,
+    Legend,
+    XAxis,
+    YAxis,
+    ComposedChart, Scatter,
+    Label
+} from "recharts";
 
-const REFRESH_TIME_SEC = 5
+const REFRESH_TIME_SEC = 1
 
 class App extends Component {
     state = {
@@ -35,13 +44,13 @@ class App extends Component {
     updateImage(url) {
         axios.get(
             url,
-            {responseType: 'arraybuffer'}
+            {responseType: "arraybuffer"}
         )
             .then(response => {
                 const base64 = btoa(
                     new Uint8Array(response.data).reduce(
                         (data, byte) => data + String.fromCharCode(byte),
-                        '',
+                        "",
                     ),
                 );
                 this.setState({source: "data:;base64," + base64});
@@ -52,9 +61,60 @@ class App extends Component {
         });
     }
 
+    timeFromTimestamp = (timestamp) => {
+        const date = new Date(timestamp * 1);
+
+        const hours = "0" + date.getHours();
+        const minutes = "0" + date.getMinutes();
+
+        return hours.substr(-2) + ":" + minutes.substr(-2);
+    }
+
+    //TODO use formatter
+    dateFromTimestamp = (timestamp) => {
+        const date = new Date(timestamp * 1);
+
+        const hours = "0" + date.getHours();
+        const minutes = "0" + date.getMinutes();
+
+        return date.getDate() + "." + ("0" + date.getMonth()).substr(-2) + "." + date.getFullYear() + ", " + hours.substr(-2) + ":" + minutes.substr(-2);
+    }
+
     render() {
-        // return this.state.message === null ? <img src={this.state.source}/> : <h>{this.state.message}</h>;
-        return <h>{this.state.message}</h>;
+        let data = [];
+        if (this.state.rawData) {
+            console.log(this.state.rawData);
+            data = Object.entries(this.state.rawData["value"]).map(
+                (e) => (
+                    {
+                        "raw_time": e[0],
+                        "value": e[1],
+                        "is_anomaly": this.state.rawData["is_anomaly"][e[0]] ? e[1] : null,
+                        "predictions": this.state.rawData["predictions"][e[0]]
+                    }))
+            console.log(data);
+        }
+        return this.state.rawData ?
+            <ComposedChart
+                width={1000}
+                height={400}
+                data={data}
+                margin={{ top: 15, right: 30, left: 20, bottom: 20 }}
+            >
+                <XAxis type="number" dataKey="raw_time" domain={["dataMin", "dataMax"]} tickCount={40}
+                       tickFormatter={this.timeFromTimestamp}>
+                    <Label value="time" position="bottom" />
+                </XAxis>
+                <YAxis label={{ value: "metric", angle: -90, position: "left" }} type="number" tickCount={10} domain={["auto", "auto"]}/>
+                <Tooltip payload={[{"xd": "xd"}]} viewBox={{x: 0, y: 0, width: 40, height: 40}}
+                         labelFormatter={this.dateFromTimestamp}/>
+                <Line type="monotone" dataKey="value" stroke="#ff7300" dot={false}/>
+                <Line type="monotone" dataKey="predictions" stroke="#82ca9d" dot={false}/>
+                <Scatter dataKey="is_anomaly" fill="blue" shape="diamond" legendType="diamond"/>
+                <Legend verticalAlign="top"/>
+            </ComposedChart>
+            :
+            <h>{this.state.message}</h>
     }
 }
 
