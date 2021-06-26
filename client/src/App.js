@@ -6,7 +6,9 @@ import {
     Legend,
     XAxis,
     YAxis,
-    ComposedChart, Scatter,
+    ComposedChart,
+    ResponsiveContainer,
+    Scatter,
     Label
 } from "recharts";
 
@@ -82,6 +84,11 @@ class App extends Component {
 
     render() {
         let data = [];
+
+        const tooltipStyle = {
+            fontWeight: "bold"
+        }
+
         if (this.state.rawData) {
             console.log(this.state.rawData);
             data = Object.entries(this.state.rawData["value"]).map(
@@ -95,24 +102,25 @@ class App extends Component {
             console.log(data);
         }
         return this.state.rawData ?
-            <ComposedChart
-                width={1000}
-                height={400}
-                data={data}
-                margin={{ top: 15, right: 30, left: 20, bottom: 20 }}
-            >
-                <XAxis type="number" dataKey="raw_time" domain={["dataMin", "dataMax"]} tickCount={40}
-                       tickFormatter={this.timeFromTimestamp}>
-                    <Label value="time" position="bottom" />
-                </XAxis>
-                <YAxis label={{ value: "metric", angle: -90, position: "left" }} type="number" tickCount={10} domain={["auto", "auto"]}/>
-                <Tooltip payload={[{"xd": "xd"}]} viewBox={{x: 0, y: 0, width: 40, height: 40}}
-                         labelFormatter={this.dateFromTimestamp}/>
-                <Line type="monotone" dataKey="value" stroke="#ff7300" dot={false}/>
-                <Line type="monotone" dataKey="predictions" stroke="#82ca9d" dot={false}/>
-                <Scatter dataKey="is_anomaly" fill="blue" shape="diamond" legendType="diamond"/>
-                <Legend verticalAlign="top"/>
-            </ComposedChart>
+            <div style={{position: "relative", width: "100%", height: 500}}><ResponsiveContainer width="100%"
+                                                                                                 height="80%">
+                <ComposedChart
+                    data={data}
+                    margin={{top: 15, right: 30, left: 20, bottom: 20}}>
+                    <XAxis type="number" dataKey="raw_time" domain={["dataMin", "dataMax"]} tickCount={40}
+                           tickFormatter={this.timeFromTimestamp}>
+                        <Label style={{fill: "white"}} value="time" position="bottom"/>
+                    </XAxis>
+                    <YAxis type="number" tickCount={10} domain={["auto", "auto"]}>
+                        <Label style={{fill: "white"}} value="metric" angle={-90} position="left"/>
+                    </YAxis>
+                    <Tooltip itemStyle={tooltipStyle} labelFormatter={this.dateFromTimestamp}/>
+                    <Line type="monotone" dataKey="value" stroke="orange" dot={false}/>
+                    <Line type="monotone" dataKey="predictions" stroke="green" dot={false}/>
+                    <Scatter dataKey="is_anomaly" fill="#5ABEF5FF" shape="diamond" legendType="diamond"/>
+                    <Legend verticalAlign="top"/>
+                </ComposedChart>
+            </ResponsiveContainer></div>
             :
             <h>{this.state.message}</h>
     }
