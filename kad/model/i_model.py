@@ -13,7 +13,7 @@ class ModelException(Exception):
 
 class IModel(ABC):
 
-    def train(self, train_df: pd.DataFrame):
+    def train(self, train_df: pd.DataFrame) -> float:
         pass
 
     def test(self, test_df: pd.DataFrame):

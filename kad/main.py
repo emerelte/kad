@@ -13,8 +13,8 @@ sys.path.insert(1, "..")
 from apscheduler.schedulers.background import BackgroundScheduler
 from matplotlib import pyplot as plt
 import pandas as pd
-from flask import Flask, send_file, Response, jsonify
-from flask_cors import cross_origin
+from flask import Flask, send_file, Response, jsonify, request
+from flask_cors import cross_origin, CORS
 
 from kad.data_processing import response_validator
 from kad.data_sources import i_data_source
@@ -43,12 +43,26 @@ class KAD(object):
 
     def __init__(self, p_config: dict):
         self.app = Flask("KAD app")
+        CORS(self.app, resources={r"/*": {"origins": "*"}})
+
+        self.app.add_url_rule(rule="/" + config["PLOT_RESULTS_ENDPOINT"],
+                              endpoint=config["PLOT_RESULTS_ENDPOINT"],
+                              view_func=self.plot_results)
+        self.app.add_url_rule(rule="/" + config["GET_RESULTS_ENDPOINT"],
+                              endpoint=config["GET_RESULTS_ENDPOINT"],
+                              view_func=self.get_results)
+        self.app.add_url_rule(rule="/" + config["UPDATE_DATA_ENDPOINT"],
+                              endpoint=config["UPDATE_DATA_ENDPOINT"],
+                              view_func=self.update_data)
+        self.app.add_url_rule(rule="/" + config["UPDATE_CONFIG_ENDPOINT"],
+                              endpoint=config["UPDATE_CONFIG_ENDPOINT"],
+                              view_func=self.update_config,
+                              methods=["POST"])
 
         file = "data/archive/artificialWithAnomaly/artificialWithAnomaly/art_daily_jumpsup.csv"
         daily_jumpsup_csv_path = os.path.join(
             "/home/maciek/Documents/Magisterka/kubernetes-anomaly-detector/notebooks/",
             file)
-
         self.data_source: i_data_source = ExemplaryDataSource(
             path=daily_jumpsup_csv_path,
             metric_name=p_config["METRIC_NAME"],
@@ -62,9 +76,10 @@ class KAD(object):
         #                                                        start_time=eval(p_config["START_TIME"]),
         #                                                        stop_time=eval(p_config["END_TIME"]),
         #                                                        update_interval_sec=p_config["UPDATE_INTERVAL_SEC"])
-        # self.model: i_model.IModel = SarimaModel(order=(0, 0, 0), seasonal_order=(1, 0, 1, 24))
+
+        self.model: i_model.IModel = SarimaModel(order=(0, 0, 0), seasonal_order=(1, 0, 1, 24))
         # self.model: i_model.IModel = AutoEncoderModel(time_steps=12)
-        self.model: i_model.IModel = HmmModel()
+        # self.model: i_model.IModel = HmmModel()
         self.metric_name = p_config["METRIC_NAME"]
         self.last_train_sample = None
         self.results_df: pd.DataFrame = None
@@ -124,10 +139,11 @@ class KAD(object):
 
         if self.results_df is None:
             logging.warning("Results not obtained yet")
-            return None
+            return Response(status=404, headers={})
 
-        print(self.results_df.to_json())
-        return jsonify(json.loads(self.results_df.to_json()))
+        results_json = json.loads(self.results_df.to_json())
+        results_json["metric"] = self.metric_name
+        return jsonify(results_json)
 
     @cross_origin(supports_credentials=True)
     def update_data(self):
@@ -153,10 +169,18 @@ class KAD(object):
 
         return Response(status=200, headers={})
 
+    @cross_origin(supports_credentials=True)
+    def update_config(self):
+        logging.info("Updating config")
+        json_data = request.get_json()
+        print(json_data["metric"])
+
+        return Response(status=200, headers={})
+
 
 if __name__ == "__main__":
     logging.basicConfig(filename="/tmp/kad.log", filemode="w", format="[%(levelname)s] %(filename)s:%(lineno)d: %("
-                                                                      "message)s", level=logging.INFO)
+                                                                      "message)s", level=logging.CRITICAL)
 
     RETRY_INTERV = 10
 
@@ -176,16 +200,6 @@ if __name__ == "__main__":
             plt.show()
 
             kad.train_model(train_df)
-
-            kad.add_endpoint(endpoint="/" + config["PLOT_RESULTS_ENDPOINT"],
-                             endpoint_name=config["PLOT_RESULTS_ENDPOINT"],
-                             handler=kad.plot_results)
-            kad.add_endpoint(endpoint="/" + config["GET_RESULTS_ENDPOINT"],
-                             endpoint_name=config["GET_RESULTS_ENDPOINT"],
-                             handler=kad.get_results)
-            kad.add_endpoint(endpoint="/" + config["UPDATE_DATA_ENDPOINT"],
-                             endpoint_name=config["UPDATE_DATA_ENDPOINT"],
-                             handler=kad.update_data)
 
             scheduler = BackgroundScheduler()
             job = scheduler.add_job(lambda: request_new_data(config), "interval",

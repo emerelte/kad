@@ -113,6 +113,10 @@ def calculate_anomaly_score(residuals: pd.Series, initial_threshold: float = 1.0
     return anom_scores.flatten()
 
 
+def calculate_validation_err(forecast, ground_truth):
+    return np.power(forecast - ground_truth, 2).mean()
+
+
 class EndpointAction(object):
     """
     Class for Flask endpoints handlers

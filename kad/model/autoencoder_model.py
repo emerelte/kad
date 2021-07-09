@@ -109,7 +109,7 @@ class AutoEncoderModel(IModel):
             # fixme magic number
             if len(test_df) < 5 * self.time_steps:
                 raise ModelException(
-                    "Autencoder should get at least 5*self.time_steps long data to give reasonable results")
+                    f"Autencoder should get at least 5*self.time_steps long data to give reasonable results, got {len(test_df)}")
 
             x_test, _ = kad_utils.embed_data(data=test_df.to_numpy().flatten(), steps=self.time_steps)
             original_indexes = kad_utils.calculate_original_indexes(len(x_test), self.time_steps)

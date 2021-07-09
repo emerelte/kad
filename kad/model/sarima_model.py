@@ -24,7 +24,7 @@ class SarimaModel(i_model.IModel):
     def __calculate_threshold(valid_errors: np.ndarray) -> float:
         return 2 * np.max(valid_errors)
 
-    def train(self, train_df: pd.DataFrame):
+    def train(self, train_df: pd.DataFrame) -> float:
         """
         @:param train_df: training data frame
         Takes training dataframe and:
@@ -46,7 +46,7 @@ class SarimaModel(i_model.IModel):
                                  enforce_stationarity=True,
                                  enforce_invertibility=False)
             self.model_results = self.model.fit()
-            print(self.model_results.summary())
+            # print(self.model_results.summary())
 
             forecast: np.ndarray = self.model_results.forecast(len(valid_df))
             ground_truth = valid_df.to_numpy().flatten()
@@ -65,6 +65,7 @@ class SarimaModel(i_model.IModel):
             self.results_df.loc[:, kad_utils.ERROR_COLUMN].iloc[-len(valid_df):] = abs_error
 
             logging.info("SARIMA anomaly threshold set to: " + str(self.error_threshold))
+            return kad_utils.calculate_validation_err(forecast, ground_truth)
 
     def test(self, test_df: pd.DataFrame) -> pd.DataFrame:
         with warnings.catch_warnings():
