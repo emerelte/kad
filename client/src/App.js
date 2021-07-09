@@ -1,5 +1,6 @@
 import React, {Component} from "react";
 import axios from "axios";
+import Keyboard from "./Keyboard";
 import {
     Line,
     Tooltip,
@@ -17,7 +18,7 @@ const REFRESH_TIME_SEC = 1
 class App extends Component {
     state = {
         message: null,
-        source: null,
+        image: null,
         rawData: null
     };
 
@@ -39,7 +40,7 @@ class App extends Component {
             this.setState({message: "Data updated"});
         }).catch(() => {
             this.setState({message: "Error fetching data!"})
-            this.setState({source: null});
+            this.setState({image: null});
         });
     }
 
@@ -55,11 +56,11 @@ class App extends Component {
                         "",
                     ),
                 );
-                this.setState({source: "data:;base64," + base64});
+                this.setState({image: "data:;base64," + base64});
                 this.setState({message: null});
             }).catch(() => {
             this.setState({message: "Error fetching image!"})
-            this.setState({source: null});
+            this.setState({image: null});
         });
     }
 
@@ -83,6 +84,7 @@ class App extends Component {
     }
 
     render() {
+        let metric_name = "";
         let data = [];
 
         const tooltipStyle = {
@@ -91,7 +93,8 @@ class App extends Component {
 
         if (this.state.rawData) {
             console.log(this.state.rawData);
-            data = Object.entries(this.state.rawData["value"]).map(
+            metric_name = this.state.rawData["metric"];
+            data = Object.entries(this.state.rawData[metric_name]).map(
                 (e) => (
                     {
                         "raw_time": e[0],
@@ -102,25 +105,28 @@ class App extends Component {
             console.log(data);
         }
         return this.state.rawData ?
-            <div style={{position: "relative", width: "100%", height: 500}}><ResponsiveContainer width="100%"
-                                                                                                 height="80%">
-                <ComposedChart
-                    data={data}
-                    margin={{top: 15, right: 30, left: 20, bottom: 20}}>
-                    <XAxis type="number" dataKey="raw_time" domain={["dataMin", "dataMax"]} tickCount={40}
-                           tickFormatter={this.timeFromTimestamp}>
-                        <Label style={{fill: "white"}} value="time" position="bottom"/>
-                    </XAxis>
-                    <YAxis type="number" tickCount={10} domain={["auto", "auto"]}>
-                        <Label style={{fill: "white"}} value="metric" angle={-90} position="left"/>
-                    </YAxis>
-                    <Tooltip itemStyle={tooltipStyle} labelFormatter={this.dateFromTimestamp}/>
-                    <Line type="monotone" dataKey="value" stroke="orange" dot={false}/>
-                    <Line type="monotone" dataKey="predictions" stroke="green" dot={false}/>
-                    <Scatter dataKey="is_anomaly" fill="#5ABEF5FF" shape="diamond" legendType="diamond"/>
-                    <Legend verticalAlign="top"/>
-                </ComposedChart>
-            </ResponsiveContainer></div>
+            <div>
+                <div style={{position: "relative", width: "100%", height: 500}}><ResponsiveContainer width="100%"
+                                                                                                     height="100%">
+                    <ComposedChart
+                        data={data}
+                        margin={{top: 15, right: 30, left: 20, bottom: 20}}>
+                        <XAxis type="number" dataKey="raw_time" domain={["dataMin", "dataMax"]} tickCount={40}
+                               tickFormatter={this.timeFromTimestamp}>
+                            <Label style={{fill: "white"}} value="time" position="bottom"/>
+                        </XAxis>
+                        <YAxis type="number" tickCount={10} domain={["auto", "auto"]}>
+                            <Label style={{fill: "white"}} value={metric_name} angle={-90} position="left"/>
+                        </YAxis>
+                        <Tooltip itemStyle={tooltipStyle} labelFormatter={this.dateFromTimestamp}/>
+                        <Line type="monotone" dataKey="value" stroke="orange" dot={false}/>
+                        <Line type="monotone" dataKey="predictions" stroke="green" dot={false}/>
+                        <Scatter dataKey="is_anomaly" fill="#5ABEF5FF" shape="diamond" legendType="diamond"/>
+                        <Legend verticalAlign="top"/>
+                    </ComposedChart>
+                </ResponsiveContainer></div>
+                <Keyboard></Keyboard>
+            </div>
             :
             <h>{this.state.message}</h>
     }
