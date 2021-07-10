@@ -1,0 +1,5 @@
+.date-picker {
+    flex: 1 0 10px;
+    display: flex;
+    flex-direction: row;
+}

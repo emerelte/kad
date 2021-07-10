@@ -1,0 +1,11 @@
+.message {
+    color: white;
+}
+
+.Button {
+    color: black;
+}
+
+.Button:disabled {
+    color: white;
+}
