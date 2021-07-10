@@ -59,32 +59,53 @@ class KAD(object):
                               view_func=self.update_config,
                               methods=["POST"])
 
-        file = "data/archive/artificialWithAnomaly/artificialWithAnomaly/art_daily_jumpsup.csv"
-        daily_jumpsup_csv_path = os.path.join(
-            "/home/maciek/Documents/Magisterka/kubernetes-anomaly-detector/notebooks/",
-            file)
-        self.data_source: i_data_source = ExemplaryDataSource(
-            path=daily_jumpsup_csv_path,
-            metric_name=p_config["METRIC_NAME"],
-            start_time=datetime.datetime.strptime("2014-04-01 14:00:00", "%Y-%m-%d %H:%M:%S"),
-            stop_time=datetime.datetime.strptime("2014-04-09 14:00:00", "%Y-%m-%d %H:%M:%S"),
-            update_interval_hours=10)
-
-        # self.data_source: i_data_source = PrometheusDataSource(query=p_config["QUERY"],
-        #                                                        prom_url=p_config["PROMETHEUS_URL"],
-        #                                                        metric_name=p_config["METRIC_NAME"],
-        #                                                        start_time=eval(p_config["START_TIME"]),
-        #                                                        stop_time=eval(p_config["END_TIME"]),
-        #                                                        update_interval_sec=p_config["UPDATE_INTERVAL_SEC"])
-
-        self.model: i_model.IModel = SarimaModel(order=(0, 0, 0), seasonal_order=(1, 0, 1, 24))
-        # self.model: i_model.IModel = AutoEncoderModel(time_steps=12)
-        # self.model: i_model.IModel = HmmModel()
-        self.metric_name = p_config["METRIC_NAME"]
+        self.config: dict = p_config
+        self.config["START_TIME"] = eval(self.config["START_TIME"])
+        self.config["END_TIME"] = eval(self.config["END_TIME"])
+        self.data_source: i_data_source = None
+        self.model: i_model.IModel = None
+        self.metric_name: str = ""
         self.last_train_sample = None
         self.results_df: pd.DataFrame = None
         self.train_mean = None
         self.train_std = None
+
+        self.set_up()
+
+    def reset(self):
+        self.data_source = None
+        self.model = None
+        self.metric_name = ""
+        self.last_train_sample = None
+        self.results_df = None
+        self.train_mean = None
+        self.train_std = None
+
+    def set_up(self):
+        self.metric_name = self.config["METRIC_NAME"]
+
+        file = "data/archive/artificialWithAnomaly/artificialWithAnomaly/art_daily_jumpsup.csv"
+        daily_jumpsup_csv_path = os.path.join(
+            "/home/maciek/Documents/Magisterka/kubernetes-anomaly-detector/notebooks/",
+            file)
+        self.data_source = ExemplaryDataSource(
+            path=daily_jumpsup_csv_path,
+            metric_name=self.metric_name,
+            start_time=self.config["START_TIME"],
+            stop_time=self.config["END_TIME"],
+            update_interval_hours=10)
+        # self.data_source = PrometheusDataSource(query=p_config["QUERY"],
+        #                                                        prom_url=p_config["PROMETHEUS_URL"],
+        #                                                        metric_name=p_config["METRIC_NAME"],
+        #                                                        start_time=p_config["START_TIME"],
+        #                                                        stop_time=p_config["END_TIME"],
+        #                                                        update_interval_sec=p_config["UPDATE_INTERVAL_SEC"])
+
+        self.model = SarimaModel(order=(0, 0, 0), seasonal_order=(1, 0, 1, 24))
+        # self.model = AutoEncoderModel(time_steps=12)
+        # self.model = HmmModel()
+        self.results_df = None
+        self.last_train_sample = None
 
     def get_train_data(self) -> pd.DataFrame:
         train_df = self.data_source.get_train_data()
@@ -93,7 +114,8 @@ class KAD(object):
         self.train_std = train_df.std()
         return kad_utils.normalize(train_df, self.train_mean, self.train_std)
 
-    def train_model(self, train_df: pd.DataFrame):
+    def train_model(self):
+        train_df = self.get_train_data()
         self.model.train(train_df)
         if len(train_df) < 2:
             logging.warning("Almost empty training df (len < 2)")
@@ -149,11 +171,15 @@ class KAD(object):
     def update_data(self):
         logging.info("Updating data")
 
+        if self.data_source is None:
+            logging.warning("Data source not present while requesting data update")
+            return Response(status=200, headers={})
+
         try:
             new_data = self.data_source.get_next_batch()
         except DataSourceException as dsexc:
             logging.warning(str(dsexc))
-            return Response(status=200, headers={})  # TODO is 200 code ok here?
+            return Response(status=200, headers={})
 
         if len(new_data) == 0:
             logging.warning("No new data has been obtained")
@@ -173,14 +199,30 @@ class KAD(object):
     def update_config(self):
         logging.info("Updating config")
         json_data = request.get_json()
-        print(json_data["metric"])
+        print(json_data)
+        print(json_data["METRIC_NAME"])
+        print(datetime.datetime.fromtimestamp(json_data["START_TIME"]))
+
+        logging.debug("Updating config...")
+        try:
+            self.config["METRIC_NAME"] = json_data["METRIC_NAME"]
+            self.config["START_TIME"] = datetime.datetime.fromtimestamp(json_data["START_TIME"])
+            self.config["END_TIME"] = datetime.datetime.fromtimestamp(json_data["END_TIME"])
+            self.set_up()
+
+            logging.debug("Training once again")
+            self.train_model()
+        except Exception:
+            logging.error("Unsuccessfull config update - resetting config")
+            self.reset()
+            return jsonify({"Error": "Unsuccessfull config update - resetting config"})
 
         return Response(status=200, headers={})
 
 
 if __name__ == "__main__":
     logging.basicConfig(filename="/tmp/kad.log", filemode="w", format="[%(levelname)s] %(filename)s:%(lineno)d: %("
-                                                                      "message)s", level=logging.CRITICAL)
+                                                                      "message)s", level=logging.INFO)
 
     RETRY_INTERV = 10
 
@@ -199,7 +241,7 @@ if __name__ == "__main__":
             train_df[config["METRIC_NAME"]].plot()
             plt.show()
 
-            kad.train_model(train_df)
+            kad.train_model()
 
             scheduler = BackgroundScheduler()
             job = scheduler.add_job(lambda: request_new_data(config), "interval",

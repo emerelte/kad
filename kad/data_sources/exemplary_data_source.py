@@ -3,6 +3,7 @@ import logging
 import numpy as np
 import pandas as pd
 
+from kad.data_processing.response_validator import MetricValidatorException
 from kad.data_sources.i_data_source import IDataSource, DataSourceException
 from kad.data_processing import prom_wrapper, response_validator, metric_parser
 import datetime
@@ -12,6 +13,9 @@ class ExemplaryDataSource(IDataSource):
 
     def __init__(self, path: str, metric_name: str, start_time: datetime.datetime,
                  stop_time: datetime.datetime, update_interval_hours: int):
+        if metric_name != "value":
+            raise MetricValidatorException("No metrics found")
+
         self.metric_name = metric_name
         self.start_time = start_time
         self.stop_time = stop_time
