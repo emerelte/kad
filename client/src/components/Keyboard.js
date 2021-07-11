@@ -57,7 +57,6 @@ class Keyboard extends Component {
 
     render() {
         return <div className="keyboard">
-            <h1>Message: {this.state.message}</h1>
             <form className="keyboard">
                 <ul className="flex-outer">
                     <li>

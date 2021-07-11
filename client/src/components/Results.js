@@ -4,7 +4,7 @@ import {ComposedChart, Label, Legend, Line, ResponsiveContainer, Scatter, Toolti
 import Button from "@material-ui/core/Button";
 import "../style/Results.css"
 
-const REFRESH_TIME_SEC = 1
+const REFRESH_TIME_SEC = 2
 
 class Results extends Component {
     constructor(props) {
@@ -80,11 +80,11 @@ class Results extends Component {
         return date.getDate() + "." + ("0" + date.getMonth()).substr(-2) + "." + date.getFullYear() + ", " + hours.substr(-2) + ":" + minutes.substr(-2);
     }
 
-    hideData = () => {
+    hideGraph = () => {
         this.setState({visible: false});
     }
 
-    showData = () => {
+    showGraph = () => {
         this.setState({visible: true});
     }
 
@@ -110,12 +110,10 @@ class Results extends Component {
             console.log(data);
         }
         if (!this.state.rawData) {
-            return <Button disabled style={{color: "darkorange"}}>No data to show</Button>
+            return <div className="results-div-outer"><Button size="large" disabled style={{color: "darkorange"}}>No data to show</Button></div>
         } else {
             return this.state.visible ?
-                <div style={{position: "relative", width: "100%", height: 500}}><Button variant="contained"
-                                                                                        onClick={this.hideData}>Hide
-                    data</Button>
+                <div className="results-div-outer" style={{position: "relative", width: "100%", height: 500}}>
                     <ResponsiveContainer width="100%"
                                          height="100%">
                         <ComposedChart
@@ -135,8 +133,9 @@ class Results extends Component {
                             <Legend verticalAlign="top"/>
                         </ComposedChart>
                     </ResponsiveContainer>
+                    <div className="results-div-inner"><Button size="large" variant="contained" onClick={this.hideGraph}>Hide graph</Button></div>
                 </div>
-                : <Button variant="contained" onClick={this.showData} style={{color: "green"}}>Show data</Button>
+                : <div className="results-div-outer"><div className="results-div-inner"><Button variant="contained" size="large" onClick={this.showGraph} style={{color: "green", width: "auto"}}>Show graph</Button></div></div>
         }
     }
 }

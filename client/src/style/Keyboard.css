@@ -1,8 +1,9 @@
 .keyboard {
-    color: white;
+    color: lightgray;
     width: 80%;
     max-width: 1200px;
     margin: 0 auto;
+    padding-bottom: 30px;
     box-sizing: border-box;
 }
 
