@@ -2,7 +2,8 @@ import React, {Component} from "react";
 import axios from "axios";
 import {ComposedChart, Label, Legend, Line, ResponsiveContainer, Scatter, Tooltip, XAxis, YAxis} from "recharts";
 import Button from "@material-ui/core/Button";
-import "../style/Results.css"
+import {dateFromTimestamp, timeFromTimestamp} from "../utils";
+import "../style/Results.css";
 
 const REFRESH_TIME_SEC = 2
 
@@ -61,25 +62,6 @@ class Results extends Component {
         });
     }
 
-    timeFromTimestamp = (timestamp) => {
-        const date = new Date(timestamp * 1);
-
-        const hours = "0" + date.getHours();
-        const minutes = "0" + date.getMinutes();
-
-        return hours.substr(-2) + ":" + minutes.substr(-2);
-    }
-
-    //TODO use formatter
-    dateFromTimestamp = (timestamp) => {
-        const date = new Date(timestamp * 1);
-
-        const hours = "0" + date.getHours();
-        const minutes = "0" + date.getMinutes();
-
-        return date.getDate() + "." + ("0" + date.getMonth()).substr(-2) + "." + date.getFullYear() + ", " + hours.substr(-2) + ":" + minutes.substr(-2);
-    }
-
     hideGraph = () => {
         this.setState({visible: false});
     }
@@ -120,13 +102,13 @@ class Results extends Component {
                             data={data}
                             margin={{top: 15, right: 30, left: 20, bottom: 20}}>
                             <XAxis type="number" dataKey="raw_time" domain={["dataMin", "dataMax"]} tickCount={40}
-                                   tickFormatter={this.timeFromTimestamp}>
+                                   tickFormatter={timeFromTimestamp}>
                                 <Label style={{fill: "white"}} value="time" position="bottom"/>
                             </XAxis>
                             <YAxis type="number" tickCount={10} domain={["auto", "auto"]}>
                                 <Label style={{fill: "white"}} value={metric_name} angle={-90} position="left"/>
                             </YAxis>
-                            <Tooltip itemStyle={tooltipStyle} labelFormatter={this.dateFromTimestamp}/>
+                            <Tooltip itemStyle={tooltipStyle} labelFormatter={dateFromTimestamp}/>
                             <Line type="monotone" dataKey="value" stroke="orange" dot={false}/>
                             <Line type="monotone" dataKey="predictions" stroke="green" dot={false}/>
                             <Scatter dataKey="is_anomaly" fill="#5ABEF5FF" shape="diamond" legendType="diamond"/>

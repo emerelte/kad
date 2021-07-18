@@ -60,8 +60,8 @@ class KAD(object):
                               methods=["POST"])
 
         self.config: dict = p_config
-        self.config["START_TIME"] = eval(self.config["START_TIME"])
-        self.config["END_TIME"] = eval(self.config["END_TIME"])
+        self.config["START_TIME"] = datetime.datetime.strptime(self.config["START_TIME"], "%Y-%m-%d %H:%M:%S")
+        self.config["END_TIME"] = datetime.datetime.strptime(self.config["END_TIME"], "%Y-%m-%d %H:%M:%S")
         self.data_source: i_data_source = None
         self.model: i_model.IModel = None
         self.metric_name: str = ""
@@ -199,18 +199,19 @@ class KAD(object):
     def update_config(self):
         logging.info("Updating config")
         json_data = request.get_json()
-        print(json_data)
-        print(json_data["METRIC_NAME"])
-        print(datetime.datetime.fromtimestamp(json_data["START_TIME"]))
 
-        logging.debug("Updating config...")
+        if not self.are_changes_in_config(json_data):
+            logging.warning("No changes in config")
+            return Response(status=200, headers={})
+
+        logging.info("Updating config accepted")
         try:
             self.config["METRIC_NAME"] = json_data["METRIC_NAME"]
-            self.config["START_TIME"] = datetime.datetime.fromtimestamp(json_data["START_TIME"])
-            self.config["END_TIME"] = datetime.datetime.fromtimestamp(json_data["END_TIME"])
+            self.config["START_TIME"] = json_data["START_TIME"]
+            self.config["END_TIME"] = json_data["END_TIME"]
             self.set_up()
 
-            logging.debug("Training once again")
+            logging.info("Training once again")
             self.train_model()
         except Exception:
             logging.error("Unsuccessfull config update - resetting config")
@@ -219,10 +220,19 @@ class KAD(object):
 
         return Response(status=200, headers={})
 
+    def are_changes_in_config(self, new_config: dict) -> bool:
+        print(self.config["METRIC_NAME"] != new_config["METRIC_NAME"])
+        print(self.config["START_TIME"] != new_config["START_TIME"])
+        print(self.config["END_TIME"] != new_config["END_TIME"])
+
+        return self.config["METRIC_NAME"] != new_config["METRIC_NAME"] or self.config["START_TIME"] != \
+               new_config["START_TIME"] or self.config["END_TIME"] != new_config["END_TIME"]
+
 
 if __name__ == "__main__":
-    logging.basicConfig(filename="/tmp/kad.log", filemode="w", format="[%(levelname)s] %(filename)s:%(lineno)d: %("
-                                                                      "message)s", level=logging.INFO)
+    logging.basicConfig(filename="/tmp/kad.log", filemode="w",
+                        format="[%(levelname)s] %(filename)s:%(lineno)d: %("
+                               "message)s", level=logging.INFO)
 
     RETRY_INTERV = 10
 

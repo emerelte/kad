@@ -4,6 +4,7 @@ import "../style/Keyboard.css";
 import TimePicker from "./TimePicker";
 import Button from "@material-ui/core/Button";
 import {TextField} from "@material-ui/core";
+import {dateFromTimestamp} from "../utils";
 
 class Keyboard extends Component {
     constructor(props) {
@@ -20,8 +21,8 @@ class Keyboard extends Component {
     postUpdatedConfig = () => {
         axios.post("http://localhost:5000/update_config", {
             "METRIC_NAME": this.state.metric,
-            "START_TIME": this.state.start_time.getTime() / 1000,
-            "END_TIME": this.state.stop_time.getTime() / 1000
+            "START_TIME": dateFromTimestamp(this.state.start_time.getTime()),
+            "END_TIME": dateFromTimestamp(this.state.stop_time.getTime())
         }).then(response => {
             this.setState({message: "POST done!"});
         }).catch(() => {

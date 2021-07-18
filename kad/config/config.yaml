@@ -11,8 +11,8 @@
 #UPDATE_INTERVAL_SEC: 1000
 
 #DUMMY
-START_TIME: datetime.datetime.strptime("2014-04-01 14:00:00", "%Y-%m-%d %H:%M:%S")
-END_TIME: datetime.datetime.strptime("2014-04-09 14:00:00", "%Y-%m-%d %H:%M:%S")
+START_TIME: "2014-04-01 14:00:00"
+END_TIME: "2014-04-09 14:00:00"
 METRIC_NAME: "value"
 APP_URL: "http://localhost:5000/"
 UPDATE_DATA_ENDPOINT: "update_data"
