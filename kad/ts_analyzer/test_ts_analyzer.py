@@ -1,13 +1,17 @@
+import os
 import unittest
+from unittest.mock import patch, Mock
 import datetime
 import pandas as pd
 import numpy as np
+from sklearn.preprocessing import MinMaxScaler
+
 from ts_analyzer import TsAnalyzer
 
 NUM_DAYS: int = 1000
 
 
-class TestTimeSeriesAnalyzer(unittest.TestCase):
+class TestTimeSeriesAnalyzerArtificialData(unittest.TestCase):
 
     def setUp(self) -> None:
         base = datetime.datetime.today()
@@ -42,3 +46,32 @@ class TestTimeSeriesAnalyzer(unittest.TestCase):
 
         self.assertEqual(expected_freq, TsAnalyzer(sin_df).calculate_dominant_frequency())
 
+
+class TestTimeSeriesAnalyzerModelSelection(unittest.TestCase):
+
+    def setUp(self) -> None:
+        data_dir = "../../notebooks/data/archive/"
+        file_dir = "artificialWithAnomaly"
+        file_name = "artificialWithAnomaly/art_daily_flatmiddle.csv"
+
+        file_path = os.path.join(data_dir, file_dir, file_name)\
+
+        df = pd.read_csv(
+            file_path, parse_dates=True, index_col="timestamp"
+        ).resample("h").agg(np.mean)
+
+        scaler = MinMaxScaler(feature_range=(-1, 0))
+        df["value"] = scaler.fit_transform(df.values)
+
+        self.sut: TsAnalyzer = TsAnalyzer(df[["value"]])
+
+    @patch('kad.model.sarima_model.SarimaModel')
+    @patch('kad.model.autoencoder_model.AutoEncoderModel')
+    def test_select_model_with_lowest_valid_err(self, MockAutoencoder, MockSarima):
+        mock_autoencoder = MockAutoencoder.return_value
+        mock_autoencoder.train.return_value = 1
+
+        mock_sarima = MockSarima.return_value
+        mock_sarima.train.return_value = 2
+
+        self.assertEqual(mock_autoencoder, self.sut.select_model())

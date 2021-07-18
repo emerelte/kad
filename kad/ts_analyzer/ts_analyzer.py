@@ -1,3 +1,4 @@
+import operator
 from datetime import timedelta
 
 import numpy as np
@@ -6,6 +7,8 @@ from matplotlib import pyplot as plt
 from statsmodels.tsa.stattools import adfuller
 from kad.kad_utils import kad_utils
 from scipy.fft import fft, fftfreq
+
+from kad.model import autoencoder_model, sarima_model
 
 
 class TsAnalyzerException(Exception):
@@ -32,6 +35,19 @@ class TsAnalyzer:
                 f"Improper number of columns passed to TsAnalyzer constr: {num_cols}, whereas it should be {required_num_cols}")
 
         self.data = ts
+
+    def select_model(self):
+        validErrByModel: dict = {autoencoder_model.AutoEncoderModel(): None,
+                                 sarima_model.SarimaModel(order=(0, 0, 0),
+                                                          seasonal_order=(
+                                                          1, 0, 1, self.calculate_dominant_frequency())): None}
+
+        for model in validErrByModel.keys():
+            validErrByModel[model] = model.train(self.data)
+
+        print(validErrByModel)
+
+        return min(validErrByModel.items(), key=operator.itemgetter(1))[0]
 
     def is_stationary(self):
         # print(self.data.head())

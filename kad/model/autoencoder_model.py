@@ -2,6 +2,7 @@ import logging
 import warnings
 import numpy as np
 import pandas as pd
+from sklearn.model_selection import train_test_split
 from tensorflow import keras
 from tensorflow.keras import layers
 from kad.kad_utils import kad_utils
@@ -13,7 +14,7 @@ from kad.model.i_model import IModel, ModelException
 
 class AutoEncoderModel(IModel):
 
-    def __init__(self, time_steps: int = kad_utils.TIME_STEPS, batch_size=12, learning_rate=0.001):
+    def __init__(self, time_steps: int = kad_utils.TIME_STEPS, batch_size=12, learning_rate=0.001, train_valid_ratio=0.7):
         if time_steps < batch_size:
             raise ModelException(
                 f"Improper parameters for Autoencoder: time_steps({time_steps}) must be higher or equal than batch_size({batch_size})")
@@ -25,6 +26,7 @@ class AutoEncoderModel(IModel):
         self.lr = learning_rate
         self.results_df = None
         self.x_train: np.ndarray = None
+        self.train_valid_ratio = train_valid_ratio
         self.nn = None
 
     @staticmethod
@@ -47,11 +49,12 @@ class AutoEncoderModel(IModel):
         self.nn.compile(optimizer=keras.optimizers.Adam(learning_rate=self.lr), loss="mse")
         self.nn.summary()
 
-    def train(self, train_df: pd.DataFrame):
+    def train(self, train_df: pd.DataFrame) -> float:
         """
         @:param train_df: training data frame
         Takes training dataframe and:
             - fits the model
+        @:returns validation error
         """
 
         logging.info("Autoencoder model training started")
@@ -59,14 +62,16 @@ class AutoEncoderModel(IModel):
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
 
-            self.__initialize_nn(train_df)
+            tr_df, valid_df = train_test_split(train_df, shuffle=False, train_size=self.train_valid_ratio)
+
+            self.__initialize_nn(tr_df)
 
             validation_size = 0.1
 
             history = self.nn.fit(
                 self.x_train,
                 self.x_train,
-                epochs=50,
+                epochs=1,
                 batch_size=self.batch_size,
                 validation_split=validation_size,
                 callbacks=[
@@ -92,6 +97,15 @@ class AutoEncoderModel(IModel):
 
             self.error_threshold = self.__calculate_threshold(
                 train_mae_loss[-int(len(train_mae_loss) * 0.5):])
+
+            x_valid, _ = kad_utils.embed_data(data=valid_df.to_numpy().flatten(), steps=self.time_steps)
+            original_indexes = kad_utils.calculate_original_indexes(len(x_valid), self.time_steps)
+
+            x_valid_pred = self.nn.predict(x_valid)
+            ground_truth = kad_utils.decode_data(x_valid, original_indexes)
+            forecast = kad_utils.decode_data(x_valid_pred, original_indexes)
+
+            return kad_utils.calculate_validation_err(forecast, ground_truth)
 
     def test(self, test_df: pd.DataFrame):
         """

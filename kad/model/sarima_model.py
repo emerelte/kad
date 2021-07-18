@@ -33,6 +33,7 @@ class SarimaModel(i_model.IModel):
                 a) predictions
                 b) forecast error
                 c) threshold set to 2*max(forecast error) which is used in testing part to calculate the anomaly score
+        @:returns validation error
         """
 
         with warnings.catch_warnings():
