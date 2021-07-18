@@ -66,12 +66,23 @@ class TestTimeSeriesAnalyzerModelSelection(unittest.TestCase):
         self.sut: TsAnalyzer = TsAnalyzer(df[["value"]])
 
     @patch('kad.model.sarima_model.SarimaModel')
+    @patch('kad.model.hmm_model.HmmModel')
+    @patch('kad.model.lstm_model.LstmModel')
     @patch('kad.model.autoencoder_model.AutoEncoderModel')
-    def test_select_model_with_lowest_valid_err(self, MockAutoencoder, MockSarima):
+    def test_select_model_with_lowest_valid_err(self, MockAutoencoder, LstmModel, HmmModel, MockSarima):
         mock_autoencoder = MockAutoencoder.return_value
-        mock_autoencoder.train.return_value = 1
+        mock_autoencoder.train.return_value = 1.0
+
+        mock_lstm = LstmModel.return_value
+        mock_lstm.train.return_value = 1.6
+
+        mock_hmm = HmmModel.return_value
+        mock_hmm.train.return_value = 1.6
 
         mock_sarima = MockSarima.return_value
-        mock_sarima.train.return_value = 2
+        mock_sarima.train.return_value = 2.0
 
         self.assertEqual(mock_autoencoder, self.sut.select_model())
+
+    def test_select_model_on_real_data(self):
+        self.sut.select_model()

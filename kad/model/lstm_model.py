@@ -4,6 +4,7 @@ from typing import List
 
 import numpy as np
 import pandas as pd
+from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler
 from tensorflow import keras
 from tensorflow.keras import layers
@@ -17,7 +18,7 @@ from kad.model.i_model import IModel, ModelException
 
 class LstmModel(IModel):
 
-    def __init__(self, time_steps: int = kad_utils.TIME_STEPS, batch_size=12):
+    def __init__(self, time_steps: int = kad_utils.TIME_STEPS, batch_size=12, train_valid_ratio=0.7):
         if time_steps < batch_size:
             raise ModelException(
                 f"Improper parameters for LstmModel: time_steps({time_steps}) must be higher or equal than batch_size({batch_size})")
@@ -29,6 +30,7 @@ class LstmModel(IModel):
         self.x_train: np.ndarray = None
         self.y_train: np.ndarray = None
         self.nn = None
+        self.train_valid_ratio = train_valid_ratio
 
     def __initialize_nn(self, train_df: pd.DataFrame):
         self.x_train, self.y_train = kad_utils.embed_data(data=train_df.to_numpy().flatten(), steps=self.time_steps)
@@ -48,17 +50,19 @@ class LstmModel(IModel):
         # TODO dynamically update threshold during testing phase
         pass
 
-    def train(self, train_df: pd.DataFrame):
+    def train(self, train_df: pd.DataFrame) -> float:
         """
         Takes training dataframe as input and computes internal states that will be used to predict the test data classes
         """
 
         logging.info("LSTM TRAIN CALLED")
 
+        tr_df, valid_df = train_test_split(train_df, shuffle=False, train_size=self.train_valid_ratio)
+
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
 
-            self.__initialize_nn(train_df)
+            self.__initialize_nn(tr_df)
 
             history = self.nn.fit(
                 self.x_train,
@@ -82,11 +86,20 @@ class LstmModel(IModel):
             original_indexes = kad_utils.calculate_original_indexes(len(self.x_train), self.time_steps)
 
             self.threshold = np.max(train_mae_loss)
-            self.results_df = train_df.copy()
+            self.results_df = tr_df.copy()
             self.results_df.loc[-len(forecast):, PREDICTIONS_COLUMN] = forecast
             self.results_df[ANOMALIES_COLUMN] = False
             self.results_df[ERROR_COLUMN] = kad_utils.decode_data(train_mae_loss, original_indexes)
             self.results_df[ANOM_SCORE_COLUMN] = calculate_anomaly_score(self.results_df[ERROR_COLUMN])
+
+            x_valid, _ = kad_utils.embed_data(data=valid_df.to_numpy().flatten(), steps=self.time_steps)
+            original_indexes = kad_utils.calculate_original_indexes(len(x_valid), self.time_steps)
+
+            ground_truth = valid_df.to_numpy().flatten()
+            x_valid_pred = self.nn.predict(x_valid)
+            forecast = kad_utils.decode_data(x_valid_pred, original_indexes)
+
+            return kad_utils.calculate_validation_err(forecast, ground_truth)
 
     def test(self, test_df: pd.DataFrame):
         """

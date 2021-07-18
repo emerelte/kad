@@ -71,7 +71,7 @@ class AutoEncoderModel(IModel):
             history = self.nn.fit(
                 self.x_train,
                 self.x_train,
-                epochs=1,
+                epochs=50,
                 batch_size=self.batch_size,
                 validation_split=validation_size,
                 callbacks=[
@@ -102,7 +102,7 @@ class AutoEncoderModel(IModel):
             original_indexes = kad_utils.calculate_original_indexes(len(x_valid), self.time_steps)
 
             x_valid_pred = self.nn.predict(x_valid)
-            ground_truth = kad_utils.decode_data(x_valid, original_indexes)
+            ground_truth = valid_df.to_numpy().flatten()
             forecast = kad_utils.decode_data(x_valid_pred, original_indexes)
 
             return kad_utils.calculate_validation_err(forecast, ground_truth)

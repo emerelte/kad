@@ -8,7 +8,7 @@ from statsmodels.tsa.stattools import adfuller
 from kad.kad_utils import kad_utils
 from scipy.fft import fft, fftfreq
 
-from kad.model import autoencoder_model, sarima_model
+from kad.model import autoencoder_model, sarima_model, hmm_model, lstm_model
 
 
 class TsAnalyzerException(Exception):
@@ -38,6 +38,8 @@ class TsAnalyzer:
 
     def select_model(self):
         validErrByModel: dict = {autoencoder_model.AutoEncoderModel(): None,
+                                 hmm_model.HmmModel(): None,
+                                 lstm_model.LstmModel(): None,
                                  sarima_model.SarimaModel(order=(0, 0, 0),
                                                           seasonal_order=(
                                                           1, 0, 1, self.calculate_dominant_frequency())): None}
