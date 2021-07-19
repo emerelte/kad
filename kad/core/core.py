@@ -5,6 +5,8 @@ import logging
 import os
 import sys
 
+from kad.ts_analyzer import ts_analyzer
+
 sys.path.insert(1, "..")
 from matplotlib import pyplot as plt
 import pandas as pd
@@ -44,9 +46,10 @@ class Core(object):
                               view_func=self.update_config,
                               methods=["POST"])
 
-        self.config["START_TIME"] = datetime.datetime.strptime(self.config["START_TIME"], "%Y-%m-%d %H:%M:%S")
-        self.config["END_TIME"] = datetime.datetime.strptime(self.config["END_TIME"], "%Y-%m-%d %H:%M:%S")
+        self.config["START_TIME"] = self.config["START_TIME"]
+        self.config["END_TIME"] = self.config["END_TIME"]
         self.data_source: i_data_source = None
+        self.model_selector: ts_analyzer.TsAnalyzer = None
         self.model: i_model.IModel = None
         self.metric_name: str = ""
         self.last_train_sample = None
@@ -75,8 +78,8 @@ class Core(object):
         self.data_source = ExemplaryDataSource(
             path=daily_jumpsup_csv_path,
             metric_name=self.metric_name,
-            start_time=self.config["START_TIME"],
-            stop_time=self.config["END_TIME"],
+            start_time=datetime.datetime.strptime(self.config["START_TIME"], "%Y-%m-%d %H:%M:%S"),
+            stop_time=datetime.datetime.strptime(self.config["END_TIME"], "%Y-%m-%d %H:%M:%S"),
             update_interval_hours=10)
         # self.data_source = PrometheusDataSource(query=p_config["QUERY"],
         #                                                        prom_url=p_config["PROMETHEUS_URL"],
@@ -85,13 +88,13 @@ class Core(object):
         #                                                        stop_time=p_config["END_TIME"],
         #                                                        update_interval_sec=p_config["UPDATE_INTERVAL_SEC"])
 
-        self.model = SarimaModel(order=(0, 0, 0), seasonal_order=(1, 0, 1, 24))
+        # self.model = SarimaModel(order=(0, 0, 0), seasonal_order=(1, 0, 1, 24))
         # self.model = AutoEncoderModel(time_steps=12)
         # self.model = HmmModel()
         self.results_df = None
         self.last_train_sample = None
 
-    def get_train_data(self) -> pd.DataFrame:
+    def __get_train_data(self) -> pd.DataFrame:
         train_df = self.data_source.get_train_data()
         self.last_train_sample = len(train_df)
         self.train_mean = train_df.mean()
@@ -99,8 +102,13 @@ class Core(object):
         return kad_utils.normalize(train_df, self.train_mean, self.train_std)
 
     def train_model(self):
-        train_df = self.get_train_data()
+        train_df = self.__get_train_data()
+
+        self.model_selector = ts_analyzer.TsAnalyzer(train_df)
+        self.model = self.model_selector.select_model()
+        logging.info("Selected model: " + self.model.__class__.__name__)
         self.model.train(train_df)
+
         if len(train_df) < 2:
             logging.warning("Almost empty training df (len < 2)")
         logging.info("Model trained")
@@ -121,7 +129,7 @@ class Core(object):
         return bytes_image
 
     def run(self):
-        self.app.run(debug=True, threaded=True)
+        self.app.run(debug=True, threaded=False)
 
     def add_endpoint(self, endpoint=None, endpoint_name=None, handler=None):
         self.app.add_url_rule(endpoint, endpoint_name, EndpointAction(handler))
@@ -183,6 +191,7 @@ class Core(object):
     def update_config(self):
         logging.info("Updating config")
         json_data = request.get_json()
+        print(json_data)
 
         if not self.are_changes_in_config(json_data):
             logging.warning("No changes in config")
@@ -205,6 +214,7 @@ class Core(object):
         return Response(status=200, headers={})
 
     def are_changes_in_config(self, new_config: dict) -> bool:
+        print(self.config)
         print(self.config["METRIC_NAME"] != new_config["METRIC_NAME"])
         print(self.config["START_TIME"] != new_config["START_TIME"])
         print(self.config["END_TIME"] != new_config["END_TIME"])

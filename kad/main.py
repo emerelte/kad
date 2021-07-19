@@ -40,11 +40,6 @@ if __name__ == "__main__":
         kad = Core(config)
 
         try:
-            train_df = kad.get_train_data()
-
-            train_df[config["METRIC_NAME"]].plot()
-            plt.show()
-
             kad.train_model()
 
             scheduler = BackgroundScheduler()

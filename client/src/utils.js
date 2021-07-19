@@ -12,5 +12,5 @@ export const dateFromTimestamp = (timestamp) => {
 
     const date = new Date(timestamp * 1);
 
-    return dateFormat(date, "yyyy-mm-dd hh:MM:ss");
+    return dateFormat(date, "yyyy-mm-dd HH:MM:ss");
 }

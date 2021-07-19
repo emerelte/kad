@@ -29,6 +29,7 @@ class TimePicker extends Component {
                         }}
                     />
                     <KeyboardTimePicker
+                        ampm={false}
                         margin="normal"
                         id="time-picker"
                         label="Select time"
