@@ -1,5 +1,5 @@
 import concurrent.futures
-import datetime
+import logging
 from typing import Tuple, Dict
 
 import numpy as np
@@ -10,6 +10,9 @@ from statsmodels.tsa.stattools import adfuller
 import kad.model.i_model
 from kad.kad_utils import kad_utils
 from kad.model import autoencoder_model, sarima_model, hmm_model, lstm_model
+
+MODEL_IDX = 0
+VALID_ERR_IDX = 1
 
 executor = concurrent.futures.ProcessPoolExecutor()
 
@@ -61,9 +64,13 @@ class TsAnalyzer:
 
         for future in futures_table:
             result: Tuple[str, float] = future.result()
-            validErrByModel[result[0]] = (validErrByModel[result[0]][0], result[1])
+            model_name = result[0]
+            valid_err = result[1]
+            validErrByModel[result[0]] = (validErrByModel[model_name][0], valid_err)
 
-        return min(validErrByModel.items(), key=lambda elem: elem[1][1])[1][1]
+        logging.info("Model selector results: " + str(validErrByModel))
+
+        return min(validErrByModel.items(), key=lambda elem: elem[1][VALID_ERR_IDX])[1][MODEL_IDX]
 
     def is_stationary(self):
         # print(self.data.head())

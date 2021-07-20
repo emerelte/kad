@@ -19,7 +19,6 @@ from kad.data_sources.i_data_source import DataSourceException
 from kad.kad_utils import kad_utils
 from kad.kad_utils.kad_utils import EndpointAction
 from kad.model import i_model
-from kad.model.sarima_model import SarimaModel
 from kad.visualization.visualization import visualize
 
 
@@ -107,7 +106,8 @@ class Core(object):
         self.model_selector = ts_analyzer.TsAnalyzer(train_df)
         self.model = self.model_selector.select_model()
         logging.info("Selected model: " + self.model.__class__.__name__)
-        self.model.train(train_df)
+
+        self.model.train(train_df)  # TODO remove or add a separate option w/o extra validation
 
         if len(train_df) < 2:
             logging.warning("Almost empty training df (len < 2)")
@@ -157,6 +157,7 @@ class Core(object):
 
         results_json = json.loads(self.results_df.to_json())
         results_json["metric"] = self.metric_name
+        results_json["model"] = self.model.__class__.__name__
         return jsonify(results_json)
 
     @cross_origin(supports_credentials=True)

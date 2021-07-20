@@ -8,7 +8,7 @@ export const timeFromTimestamp = (timestamp) => {
 }
 
 export const dateFromTimestamp = (timestamp) => {
-    var dateFormat = require("dateformat");
+    const dateFormat = require("dateformat");
 
     const date = new Date(timestamp * 1);
 
