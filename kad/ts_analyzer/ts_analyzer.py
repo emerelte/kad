@@ -1,14 +1,21 @@
-import operator
-from datetime import timedelta
+import concurrent.futures
+import datetime
+from typing import Tuple, Dict
 
 import numpy as np
 import pandas as pd
-from matplotlib import pyplot as plt
-from statsmodels.tsa.stattools import adfuller
-from kad.kad_utils import kad_utils
 from scipy.fft import fft, fftfreq
+from statsmodels.tsa.stattools import adfuller
 
+import kad.model.i_model
+from kad.kad_utils import kad_utils
 from kad.model import autoencoder_model, sarima_model, hmm_model, lstm_model
+
+executor = concurrent.futures.ProcessPoolExecutor()
+
+
+def task_executor(model: kad.model.i_model.IModel, data: pd.DataFrame):
+    return model.__class__.__name__, model.train(data)
 
 
 class TsAnalyzerException(Exception):
@@ -37,19 +44,26 @@ class TsAnalyzer:
         self.data = ts
 
     def select_model(self):
-        validErrByModel: dict = {autoencoder_model.AutoEncoderModel(): None,
-                                 hmm_model.HmmModel(): None,
-                                 lstm_model.LstmModel(): None,
-                                 sarima_model.SarimaModel(order=(0, 0, 0),
-                                                          seasonal_order=(
-                                                          1, 0, 1, self.calculate_dominant_frequency())): None}
+        validErrByModel: Dict[str, Tuple[kad.model.i_model.IModel, float]] = {
+            "AutoEncoderModel": (autoencoder_model.AutoEncoderModel(), None),
+            "HmmModel": (hmm_model.HmmModel(), None),
+            "LstmModel": (lstm_model.LstmModel(), None),
+            "SarimaModel": (sarima_model.SarimaModel(order=(0, 0, 0),
+                                                     seasonal_order=(
+                                                         1, 0, 1,
+                                                         self.calculate_dominant_frequency())), None)}
 
-        for model in validErrByModel.keys():
-            validErrByModel[model] = model.train(self.data)
+        futures_table = list()
 
-        print(validErrByModel)
+        for model in validErrByModel.values():
+            futures_table.append(
+                executor.submit(task_executor, model[0], self.data))
 
-        return min(validErrByModel.items(), key=operator.itemgetter(1))[0]
+        for future in futures_table:
+            result: Tuple[str, float] = future.result()
+            validErrByModel[result[0]] = (validErrByModel[result[0]][0], result[1])
+
+        return min(validErrByModel.items(), key=lambda elem: elem[1][1])[1][1]
 
     def is_stationary(self):
         # print(self.data.head())
