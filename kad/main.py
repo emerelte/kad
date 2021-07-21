@@ -40,8 +40,6 @@ if __name__ == "__main__":
         kad = Core(config)
 
         try:
-            kad.train_model()
-
             scheduler = BackgroundScheduler()
             job = scheduler.add_job(lambda: request_new_data(config), "interval",
                                     minutes=config["UPDATE_INTERVAL_SEC"] / 60)

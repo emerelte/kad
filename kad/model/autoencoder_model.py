@@ -120,7 +120,6 @@ class AutoEncoderModel(IModel):
             if self.x_train is None or self.nn is None:
                 raise ModelException("Model not trained, cannot test")
 
-            # fixme magic number
             if len(test_df) < 5 * self.time_steps:
                 raise ModelException(
                     f"Autencoder should get at least 5*self.time_steps long data to give reasonable results, got {len(test_df)}")

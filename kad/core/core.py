@@ -5,6 +5,7 @@ import logging
 import os
 import sys
 
+from kad.model.model_utils import name_2_model
 from kad.ts_analyzer import ts_analyzer
 
 sys.path.insert(1, "..")
@@ -45,12 +46,9 @@ class Core(object):
                               view_func=self.update_config,
                               methods=["POST"])
 
-        self.config["START_TIME"] = self.config["START_TIME"]
-        self.config["END_TIME"] = self.config["END_TIME"]
         self.data_source: i_data_source = None
         self.model_selector: ts_analyzer.TsAnalyzer = None
         self.model: i_model.IModel = None
-        self.metric_name: str = ""
         self.last_train_sample = None
         self.results_df: pd.DataFrame = None
         self.train_mean = None
@@ -61,22 +59,19 @@ class Core(object):
     def reset(self):
         self.data_source = None
         self.model = None
-        self.metric_name = ""
         self.last_train_sample = None
         self.results_df = None
         self.train_mean = None
         self.train_std = None
 
     def set_up(self):
-        self.metric_name = self.config["METRIC_NAME"]
-
         file = "data/archive/artificialWithAnomaly/artificialWithAnomaly/art_daily_jumpsup.csv"
         daily_jumpsup_csv_path = os.path.join(
             "/home/maciek/Documents/Magisterka/kubernetes-anomaly-detector/notebooks/",
             file)
         self.data_source = ExemplaryDataSource(
             path=daily_jumpsup_csv_path,
-            metric_name=self.metric_name,
+            metric_name=self.config["METRIC_NAME"],
             start_time=datetime.datetime.strptime(self.config["START_TIME"], "%Y-%m-%d %H:%M:%S"),
             stop_time=datetime.datetime.strptime(self.config["END_TIME"], "%Y-%m-%d %H:%M:%S"),
             update_interval_hours=10)
@@ -100,11 +95,14 @@ class Core(object):
         self.train_std = train_df.std()
         return kad_utils.normalize(train_df, self.train_mean, self.train_std)
 
-    def train_model(self):
+    def __select_and_train_model(self):
         train_df = self.__get_train_data()
 
         self.model_selector = ts_analyzer.TsAnalyzer(train_df)
-        self.model = self.model_selector.select_model()
+        if "MODEL_NAME" in self.config:
+            self.model = name_2_model(self.config["MODEL_NAME"], self.model_selector)
+        else:
+            self.model = self.model_selector.select_model()
         logging.info("Selected model: " + self.model.__class__.__name__)
 
         self.model.train(train_df)  # TODO remove or add a separate option w/o extra validation
@@ -121,7 +119,7 @@ class Core(object):
             logging.warning("Results not obtained yet")
             return None
 
-        visualize(self.results_df, self.metric_name, self.last_train_sample)
+        visualize(self.results_df, self.config["METRIC_NAME"], self.last_train_sample)
 
         bytes_image = io.BytesIO()
         plt.savefig(bytes_image, format="png")
@@ -129,6 +127,7 @@ class Core(object):
         return bytes_image
 
     def run(self):
+        self.__select_and_train_model()
         self.app.run(debug=True, threaded=False)
 
     def add_endpoint(self, endpoint=None, endpoint_name=None, handler=None):
@@ -156,7 +155,7 @@ class Core(object):
             return Response(status=404, headers={})
 
         results_json = json.loads(self.results_df.to_json())
-        results_json["metric"] = self.metric_name
+        results_json["metric"] = self.config["METRIC_NAME"]
         results_json["model"] = self.model.__class__.__name__
         return jsonify(results_json)
 
@@ -203,10 +202,11 @@ class Core(object):
             self.config["METRIC_NAME"] = json_data["METRIC_NAME"]
             self.config["START_TIME"] = json_data["START_TIME"]
             self.config["END_TIME"] = json_data["END_TIME"]
+            self.config["MODEL_NAME"] = json_data["MODEL_NAME"]
             self.set_up()
 
             logging.info("Training once again")
-            self.train_model()
+            self.__select_and_train_model()
         except Exception:
             logging.error("Unsuccessfull config update - resetting config")
             self.reset()
@@ -215,10 +215,6 @@ class Core(object):
         return Response(status=200, headers={})
 
     def are_changes_in_config(self, new_config: dict) -> bool:
-        print(self.config)
-        print(self.config["METRIC_NAME"] != new_config["METRIC_NAME"])
-        print(self.config["START_TIME"] != new_config["START_TIME"])
-        print(self.config["END_TIME"] != new_config["END_TIME"])
+        shared_items = {k: self.config[k] for k in self.config if k in new_config and self.config[k] == new_config[k]}
 
-        return self.config["METRIC_NAME"] != new_config["METRIC_NAME"] or self.config["START_TIME"] != \
-               new_config["START_TIME"] or self.config["END_TIME"] != new_config["END_TIME"]
+        return len(shared_items) != len(new_config.keys())
