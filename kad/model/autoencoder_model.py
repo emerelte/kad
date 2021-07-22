@@ -8,13 +8,16 @@ from tensorflow.keras import layers
 from kad.kad_utils import kad_utils
 from matplotlib import pyplot as plt
 
-from kad.kad_utils.kad_utils import calculate_anomaly_score, ANOM_SCORE_COLUMN, ERROR_COLUMN, ANOMALIES_COLUMN
+from kad.kad_utils.kad_utils import calculate_anomaly_score, ANOM_SCORE_COLUMN, ERROR_COLUMN, ANOMALIES_COLUMN, \
+    PREDICTIONS_COLUMN
 from kad.model.i_model import IModel, ModelException
 
 
 class AutoEncoderModel(IModel):
 
-    def __init__(self, time_steps: int = kad_utils.TIME_STEPS, batch_size=12, learning_rate=0.001, train_valid_ratio=0.7):
+    def __init__(self, time_steps: int = kad_utils.TIME_STEPS, batch_size=12, learning_rate=0.001,
+                 train_valid_ratio=0.7):
+        super().__init__()
         if time_steps < batch_size:
             raise ModelException(
                 f"Improper parameters for Autoencoder: time_steps({time_steps}) must be higher or equal than batch_size({batch_size})")
@@ -34,7 +37,6 @@ class AutoEncoderModel(IModel):
         return 2 * np.max(valid_errors)
 
     def __initialize_nn(self, train_df: pd.DataFrame):
-        self.results_df = train_df
         self.x_train, _ = kad_utils.embed_data(data=train_df.to_numpy().flatten(), steps=self.time_steps)
         self.nn = keras.Sequential(
             [
@@ -90,20 +92,30 @@ class AutoEncoderModel(IModel):
 
             original_indexes = kad_utils.calculate_original_indexes(len(self.x_train), self.time_steps)
 
-            self.results_df[kad_utils.PREDICTIONS_COLUMN] = kad_utils.decode_data(x_train_pred, original_indexes)
-            self.results_df[ERROR_COLUMN] = kad_utils.decode_data(train_mae_loss, original_indexes)
-            self.results_df[ANOM_SCORE_COLUMN] = calculate_anomaly_score(self.results_df[ERROR_COLUMN])
-            self.results_df[kad_utils.ANOMALIES_COLUMN] = np.full(len(self.results_df), False, dtype=bool)
+            self.results_df = train_df.copy()
+            self.results_df.loc[:len(tr_df), kad_utils.PREDICTIONS_COLUMN] = kad_utils.decode_data(x_train_pred,
+                                                                                                   original_indexes)
+            self.results_df.loc[:len(tr_df), ERROR_COLUMN] = kad_utils.decode_data(train_mae_loss, original_indexes)
 
             self.error_threshold = self.__calculate_threshold(
                 train_mae_loss[-int(len(train_mae_loss) * 0.5):])
 
-            x_valid, _ = kad_utils.embed_data(data=valid_df.to_numpy().flatten(), steps=self.time_steps)
+            x_valid, y_valid = kad_utils.embed_data(data=valid_df.to_numpy().flatten(), steps=self.time_steps)
             original_indexes = kad_utils.calculate_original_indexes(len(x_valid), self.time_steps)
 
             x_valid_pred = self.nn.predict(x_valid)
             ground_truth = valid_df.to_numpy().flatten()
             forecast = kad_utils.decode_data(x_valid_pred, original_indexes)
+
+            valid_mae_loss = np.mean(np.abs(forecast - y_valid), axis=1)
+
+            self.results_df.loc[-len(valid_df):, PREDICTIONS_COLUMN] = forecast
+            self.results_df.loc[-len(valid_df):, ERROR_COLUMN] = kad_utils.decode_data(valid_mae_loss, original_indexes)
+
+            self.results_df[ANOM_SCORE_COLUMN] = calculate_anomaly_score(self.results_df[ERROR_COLUMN])
+            self.results_df[kad_utils.ANOMALIES_COLUMN] = np.full(len(self.results_df), False, dtype=bool)
+
+            self.trained = True
 
             return kad_utils.calculate_validation_err(forecast, ground_truth)
 

@@ -13,6 +13,7 @@ from kad.model import i_model
 class HmmModel(i_model.IModel):
 
     def __init__(self, train_valid_ratio=0.7):
+        super().__init__()
         self.model = GaussianHMM(n_components=2, covariance_type='tied', n_iter=1000)
         self.threshold: float = 0.0
         self.result_df = None
@@ -37,6 +38,8 @@ class HmmModel(i_model.IModel):
         ground_truth = valid_df.to_numpy().flatten()
         valid_states = self.model.predict(valid_df)
         valid_samples = [self.model._generate_sample_from_state(s)[0] for s in valid_states]
+
+        self.trained = True
 
         return kad_utils.calculate_validation_err(valid_samples, ground_truth)
 

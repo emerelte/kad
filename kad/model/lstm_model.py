@@ -19,6 +19,7 @@ from kad.model.i_model import IModel, ModelException
 class LstmModel(IModel):
 
     def __init__(self, time_steps: int = kad_utils.TIME_STEPS, batch_size=12, train_valid_ratio=0.7):
+        super().__init__()
         if time_steps < batch_size:
             raise ModelException(
                 f"Improper parameters for LstmModel: time_steps({time_steps}) must be higher or equal than batch_size({batch_size})")
@@ -86,18 +87,27 @@ class LstmModel(IModel):
             original_indexes = kad_utils.calculate_original_indexes(len(self.x_train), self.time_steps)
 
             self.threshold = np.max(train_mae_loss)
-            self.results_df = tr_df.copy()
-            self.results_df.loc[-len(forecast):, PREDICTIONS_COLUMN] = forecast
-            self.results_df[ANOMALIES_COLUMN] = False
-            self.results_df[ERROR_COLUMN] = kad_utils.decode_data(train_mae_loss, original_indexes)
-            self.results_df[ANOM_SCORE_COLUMN] = calculate_anomaly_score(self.results_df[ERROR_COLUMN])
 
-            x_valid, _ = kad_utils.embed_data(data=valid_df.to_numpy().flatten(), steps=self.time_steps)
+            self.results_df = train_df.copy()
+            self.results_df.loc[:len(tr_df), PREDICTIONS_COLUMN] = kad_utils.decode_data(forecast, original_indexes)
+            self.results_df.loc[:len(tr_df), ERROR_COLUMN] = kad_utils.decode_data(train_mae_loss, original_indexes)
+
+            x_valid, y_valid = kad_utils.embed_data(data=valid_df.to_numpy().flatten(), steps=self.time_steps)
             original_indexes = kad_utils.calculate_original_indexes(len(x_valid), self.time_steps)
 
             ground_truth = valid_df.to_numpy().flatten()
             x_valid_pred = self.nn.predict(x_valid)
+
+            # todo fix duplications
             forecast = kad_utils.decode_data(x_valid_pred, original_indexes)
+            valid_mae_loss = np.mean(np.abs(forecast - y_valid), axis=1)
+
+            self.results_df.loc[-len(valid_df):, PREDICTIONS_COLUMN] = forecast
+            self.results_df.loc[-len(valid_df):, ERROR_COLUMN] = kad_utils.decode_data(valid_mae_loss, original_indexes)
+            self.results_df[ANOM_SCORE_COLUMN] = calculate_anomaly_score(self.results_df[ERROR_COLUMN])
+            self.results_df[ANOMALIES_COLUMN] = False
+
+            self.trained = True
 
             return kad_utils.calculate_validation_err(forecast, ground_truth)
 

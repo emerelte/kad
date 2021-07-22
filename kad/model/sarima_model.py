@@ -11,6 +11,7 @@ from kad.model import i_model
 
 class SarimaModel(i_model.IModel):
     def __init__(self, order: Tuple[int, int, int], seasonal_order: Tuple[int, int, int, int], train_valid_ratio=0.7):
+        super().__init__()
         self.model = None
         self.model_results = None
         self.error_threshold: float = 0.0
@@ -66,6 +67,7 @@ class SarimaModel(i_model.IModel):
             self.results_df.loc[:, kad_utils.ERROR_COLUMN].iloc[-len(valid_df):] = abs_error
 
             logging.info("SARIMA anomaly threshold set to: " + str(self.error_threshold))
+            self.trained = True
             return kad_utils.calculate_validation_err(forecast, ground_truth)
 
     def test(self, test_df: pd.DataFrame) -> pd.DataFrame:

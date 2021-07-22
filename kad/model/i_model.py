@@ -12,6 +12,11 @@ class ModelException(Exception):
 
 
 class IModel(ABC):
+    def __init__(self):
+        self.trained: bool = False
+
+    def is_trained(self) -> bool:
+        return self.trained
 
     def train(self, train_df: pd.DataFrame) -> float:
         pass

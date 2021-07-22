@@ -163,6 +163,10 @@ class Core(object):
     def update_data(self):
         logging.info("Updating data")
 
+        if not self.model or not self.model.is_trained():
+            logging.warning("Model not trained while requesting new data")
+            return Response(status=200, headers={})
+
         if self.data_source is None:
             logging.warning("Data source not present while requesting data update")
             return Response(status=200, headers={})
