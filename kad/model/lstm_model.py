@@ -24,7 +24,8 @@ class LstmModel(IModel):
             raise ModelException(
                 f"Improper parameters for LstmModel: time_steps({time_steps}) must be higher or equal than batch_size({batch_size})")
 
-        self.threshold = None
+        self.error_threshold = None
+        self.anomaly_score_threshold: float = 0.95
         self.time_steps = time_steps
         self.batch_size = batch_size
         self.results_df = None
@@ -50,6 +51,13 @@ class LstmModel(IModel):
     def __update_threshold(self):
         # TODO dynamically update threshold during testing phase
         pass
+
+    def __calculate_pred_and_err(self, x_data, y_data):
+        predictions = self.nn.predict(x_data)
+        mae_loss = np.mean(np.abs(predictions - y_data), axis=1)
+        original_indexes = kad_utils.calculate_original_indexes(len(x_data), self.time_steps)
+
+        return kad_utils.decode_data(predictions, original_indexes), kad_utils.decode_data(mae_loss, original_indexes)
 
     def train(self, train_df: pd.DataFrame) -> float:
         """
@@ -81,35 +89,26 @@ class LstmModel(IModel):
             plt.legend()
             plt.show()
 
-            forecast = self.nn.predict(self.x_train)
-            train_mae_loss = np.mean(np.abs(forecast - self.y_train), axis=1)
-
-            original_indexes = kad_utils.calculate_original_indexes(len(self.x_train), self.time_steps)
-
-            self.threshold = np.max(train_mae_loss)
-
             self.results_df = train_df.copy()
-            self.results_df.loc[:len(tr_df), PREDICTIONS_COLUMN] = kad_utils.decode_data(forecast, original_indexes)
-            self.results_df.loc[:len(tr_df), ERROR_COLUMN] = kad_utils.decode_data(train_mae_loss, original_indexes)
+
+            train_predictions, train_mae = self.__calculate_pred_and_err(self.x_train, self.y_train)
+            self.results_df.loc[:len(tr_df), PREDICTIONS_COLUMN] = train_predictions
+            self.results_df.loc[:len(tr_df), ERROR_COLUMN] = train_mae
 
             x_valid, y_valid = kad_utils.embed_data(data=valid_df.to_numpy().flatten(), steps=self.time_steps)
-            original_indexes = kad_utils.calculate_original_indexes(len(x_valid), self.time_steps)
 
-            ground_truth = valid_df.to_numpy().flatten()
-            x_valid_pred = self.nn.predict(x_valid)
+            valid_predictions, valid_mae = self.__calculate_pred_and_err(x_valid, y_valid)
+            self.results_df.loc[-len(valid_df):, PREDICTIONS_COLUMN] = valid_predictions
+            self.results_df.loc[-len(valid_df):, ERROR_COLUMN] = valid_mae
 
-            # todo fix duplications
-            forecast = kad_utils.decode_data(x_valid_pred, original_indexes)
-            valid_mae_loss = np.mean(np.abs(forecast - y_valid), axis=1)
-
-            self.results_df.loc[-len(valid_df):, PREDICTIONS_COLUMN] = forecast
-            self.results_df.loc[-len(valid_df):, ERROR_COLUMN] = kad_utils.decode_data(valid_mae_loss, original_indexes)
             self.results_df[ANOM_SCORE_COLUMN] = calculate_anomaly_score(self.results_df[ERROR_COLUMN])
             self.results_df[ANOMALIES_COLUMN] = False
 
+            self.error_threshold = np.max(train_mae)
+
             self.trained = True
 
-            return kad_utils.calculate_validation_err(forecast, ground_truth)
+            return kad_utils.calculate_validation_err(valid_predictions, valid_df.to_numpy().flatten())
 
     def test(self, test_df: pd.DataFrame):
         """
@@ -124,27 +123,25 @@ class LstmModel(IModel):
             if self.x_train is None or self.nn is None:
                 raise ModelException("Model not trained, cannot test")
 
-            extended_test_df = np.concatenate((self.results_df[test_df.columns[0]].to_numpy()[-self.time_steps:],
-                                               test_df.to_numpy().flatten()))
+            x_test, y_test = kad_utils.embed_data(data=test_df.to_numpy().flatten(), steps=self.time_steps)
 
-            x_test, y_test = kad_utils.embed_data(data=extended_test_df, steps=self.time_steps)
+            test_pred, test_err = self.__calculate_pred_and_err(x_test, y_test)
 
-            forecast = self.nn.predict(x_test)
-            residuals = test_df.values.squeeze() - forecast.flatten()
-            absolute_error = np.abs(residuals)
-
-            anomalies = absolute_error > self.threshold
+            anomalies = test_err > self.error_threshold
             for anom_idx in np.where(anomalies)[0]:
-                logging.info(f"Anomaly detected at idx: {anom_idx}. Forecasting error: {absolute_error[anom_idx]}")
+                logging.info(f"Anomaly detected at idx: {anom_idx}. Forecasting error: {test_err[anom_idx]}")
 
-            temp_df = test_df.copy()
-            temp_df["is_anomaly"] = anomalies
-            temp_df.loc[-len(forecast):, "residuals"] = absolute_error
-            temp_df.loc[-len(forecast):, "predictions"] = forecast
+            self.results_df = pd.concat([self.results_df, test_df.copy()])
+            self.results_df.loc[-len(test_df):, kad_utils.PREDICTIONS_COLUMN] = test_pred
+            self.results_df.loc[-len(test_df):, ERROR_COLUMN] = test_err
 
-            self.results_df = pd.concat([self.results_df, temp_df])
-            self.results_df.loc[:, ANOM_SCORE_COLUMN].iloc[-len(forecast):] = kad_utils.calculate_anomaly_score(
-                self.results_df["residuals"])[-len(forecast):]
+            self.results_df.loc[-len(test_df):, ANOM_SCORE_COLUMN] = \
+                calculate_anomaly_score(self.results_df[ERROR_COLUMN], self.error_threshold)[-len(test_df):]
+
+            self.results_df.loc[:, ANOMALIES_COLUMN].iloc[-len(test_df):] = \
+                np.any(self.results_df[kad_utils.ANOM_SCORE_COLUMN].iloc[
+                       -len(test_df):].to_numpy().flatten() > self.anomaly_score_threshold)
+            self.results_df[ANOMALIES_COLUMN] = self.results_df[ANOMALIES_COLUMN].astype("bool")
 
             self.__update_threshold()
 
