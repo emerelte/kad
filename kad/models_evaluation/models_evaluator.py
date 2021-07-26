@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 import sklearn.metrics as metrics
 
@@ -56,3 +57,14 @@ class ModelsEvaluator:
         plt.xlabel("True positive rate")
         plt.title(f"Receiver operationg characteristic: AUC = {area_under_roc:.2f}")
         plt.legend(loc="lower right")
+
+    def calculate_first_scoring_component(self) -> float:
+        anomaly_window = self.df[self.df[GROUND_TRUTH_COLUMN]].reset_index()
+        anomaly_window_middle = anomaly_window.iloc[int(len(anomaly_window) / 2)]
+
+        gt_anom_idx = anomaly_window.index[anomaly_window["timestamp"] == anomaly_window_middle["timestamp"]]
+
+        detected_idxs = anomaly_window.index[anomaly_window[ANOMALIES_COLUMN]]
+        dist_to_closest_pred = min([abs(gt_anom_idx - det_idx) for det_idx in detected_idxs])
+
+        return 1.0 - dist_to_closest_pred/gt_anom_idx[0]
