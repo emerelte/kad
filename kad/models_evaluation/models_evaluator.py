@@ -65,6 +65,27 @@ class ModelsEvaluator:
         gt_anom_idx = anomaly_window.index[anomaly_window["timestamp"] == anomaly_window_middle["timestamp"]]
 
         detected_idxs = anomaly_window.index[anomaly_window[ANOMALIES_COLUMN]]
+        if detected_idxs.empty:
+            return 0.0
+
         dist_to_closest_pred = min([abs(gt_anom_idx - det_idx) for det_idx in detected_idxs])
 
-        return 1.0 - dist_to_closest_pred/gt_anom_idx[0]
+        return 1.0 - dist_to_closest_pred / gt_anom_idx[0]
+
+    @staticmethod
+    def __calculate_positive_scoring_function(x) -> np.ndarray:
+        coef = 0.5
+        middle = int(len(x) / 2)
+
+        return 1 / (1 + np.exp(coef * abs(x - middle)))
+
+    def calculate_second_scoring_component(self) -> float:
+        anomaly_window = self.df[self.df[GROUND_TRUTH_COLUMN]][[GROUND_TRUTH_COLUMN, ANOMALIES_COLUMN]].reset_index()
+
+        anomaly_window["positive_scoring_func"] = self.__calculate_positive_scoring_function(anomaly_window.index)
+
+        total_auc = np.sum(anomaly_window["positive_scoring_func"])
+        detected_anomalies_auc = np.sum(anomaly_window[anomaly_window[ANOMALIES_COLUMN]]["positive_scoring_func"])
+        print(2 * detected_anomalies_auc / total_auc)
+
+        return min([1.0, 2 * detected_anomalies_auc / total_auc])
