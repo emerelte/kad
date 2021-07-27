@@ -81,3 +81,13 @@ class TestSecondScoringComponent(TestScoringComponents):
 
     def test_return_0_if_no_anomalies_found(self):
         self.assertEqual(0.0, self.sut.calculate_second_scoring_component())
+
+
+class TestThirdScoringComponent(TestScoringComponents):
+    def test_return_1_if_no_false_positives(self):
+        self.assertEqual(1.0, self.sut.calculate_third_scoring_component())
+
+    def test_return_0_if_all_false_positives(self):
+        self.sut.df.loc[:, ANOMALIES_COLUMN] = True
+
+        self.assertEqual(0.0, self.sut.calculate_third_scoring_component())

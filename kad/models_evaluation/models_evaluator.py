@@ -89,3 +89,27 @@ class ModelsEvaluator:
         print(2 * detected_anomalies_auc / total_auc)
 
         return min([1.0, 2 * detected_anomalies_auc / total_auc])
+
+    @staticmethod
+    def __calculate_negative_scoring_function(x) -> np.ndarray:
+        coef = 0.01
+
+        middle = int(len(x) / 2)
+
+        return -1 / (1 + np.exp(-coef * abs(x - middle)))
+
+    def calculate_third_scoring_component(self) -> float:
+        all_but_anomaly_window = self.df[self.df[GROUND_TRUTH_COLUMN] == False][
+            [GROUND_TRUTH_COLUMN, ANOMALIES_COLUMN]].reset_index()
+
+        all_but_anomaly_window["negative_scoring_func"] = self.__calculate_negative_scoring_function(
+            all_but_anomaly_window.index)
+
+        plt.plot(all_but_anomaly_window.index.to_numpy(), all_but_anomaly_window["negative_scoring_func"])
+        plt.show()
+
+        total_auc = np.sum(all_but_anomaly_window["negative_scoring_func"])
+        false_positives_auc = np.sum(
+            all_but_anomaly_window[all_but_anomaly_window[ANOMALIES_COLUMN]]["negative_scoring_func"])
+
+        return max([0.0, 1 - false_positives_auc / total_auc])
