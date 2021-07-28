@@ -70,7 +70,7 @@ class ModelsEvaluator:
 
         dist_to_closest_pred = min([abs(gt_anom_idx - det_idx) for det_idx in detected_idxs])
 
-        return 1.0 - dist_to_closest_pred / gt_anom_idx[0]
+        return 1.0 - dist_to_closest_pred[0] / gt_anom_idx[0]
 
     @staticmethod
     def __calculate_positive_scoring_function(x) -> np.ndarray:
@@ -113,3 +113,8 @@ class ModelsEvaluator:
             all_but_anomaly_window[all_but_anomaly_window[ANOMALIES_COLUMN]]["negative_scoring_func"])
 
         return max([0.0, 1 - false_positives_auc / total_auc])
+
+    def get_customized_score(self) -> float:
+        return (self.calculate_first_scoring_component() +
+                self.calculate_second_scoring_component() +
+                self.calculate_third_scoring_component()) / 3
