@@ -6,7 +6,7 @@ import os
 import sys
 
 from kad.model.model_utils import name_2_model
-from kad.ts_analyzer import ts_analyzer
+from kad.model_selector import model_selector
 
 sys.path.insert(1, "..")
 from matplotlib import pyplot as plt
@@ -47,7 +47,7 @@ class Core(object):
                               methods=["POST"])
 
         self.data_source: i_data_source = None
-        self.model_selector: ts_analyzer.TsAnalyzer = None
+        self.model_selector: model_selector.ModelSelector = None
         self.model: i_model.IModel = None
         self.last_train_sample = None
         self.results_df: pd.DataFrame = None
@@ -98,7 +98,7 @@ class Core(object):
     def __select_and_train_model(self):
         train_df = self.__get_train_data()
 
-        self.model_selector = ts_analyzer.TsAnalyzer(train_df)
+        self.model_selector = model_selector.ModelSelector(train_df)
         if "MODEL_NAME" in self.config:
             self.model = name_2_model(self.config["MODEL_NAME"], self.model_selector)
         else:

@@ -1,8 +1,8 @@
 from kad.model import i_model, lstm_model, sarima_model, autoencoder_model, hmm_model
-from kad.ts_analyzer import ts_analyzer
+from kad.model_selector import model_selector
 
 
-def name_2_model(model_name: str, model_selector: ts_analyzer.TsAnalyzer) -> i_model.IModel:
+def name_2_model(model_name: str, model_selector: model_selector.ModelSelector) -> i_model.IModel:
     if model_name == "LstmModel":
         return lstm_model.LstmModel()
     elif model_name == "HmmModel":

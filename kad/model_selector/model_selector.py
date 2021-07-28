@@ -29,7 +29,7 @@ class TsAnalyzerException(Exception):
         return f"{self.message}"
 
 
-class TsAnalyzer:
+class ModelSelector:
     """
     Ts analyzer provides a set of methods describing characteristics of the data
     """

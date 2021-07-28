@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
 
-from ts_analyzer import TsAnalyzer
+from model_selector import ModelSelector
 
 NUM_DAYS: int = 1000
 
@@ -22,7 +22,7 @@ class TestTimeSeriesAnalyzerArtificialData(unittest.TestCase):
         white_noise_arr: np.ndarray = np.random.normal(0, 1, NUM_DAYS)
         stationary_df = pd.DataFrame(data=white_noise_arr, index=self.date_list)
 
-        self.assertTrue(TsAnalyzer(stationary_df).is_stationary())
+        self.assertTrue(ModelSelector(stationary_df).is_stationary())
 
     def test_is_stationary_should_return_false_given_random_walk(self):
         step_set = [-1, 0, 1]
@@ -33,7 +33,7 @@ class TestTimeSeriesAnalyzerArtificialData(unittest.TestCase):
         random_walk_arr = np.concatenate([origin, steps]).cumsum(0)
         random_walk_df = pd.DataFrame(data=random_walk_arr, index=self.date_list)
 
-        self.assertFalse(TsAnalyzer(random_walk_df).is_stationary())
+        self.assertFalse(ModelSelector(random_walk_df).is_stationary())
 
     def test_calculate_dominant_frequency(self):
         t_start = 0
@@ -45,7 +45,7 @@ class TestTimeSeriesAnalyzerArtificialData(unittest.TestCase):
         sin_sig = np.sin(t)
         sin_df = pd.DataFrame(data=sin_sig, index=self.date_list).asfreq("d")
 
-        self.assertEqual(expected_freq, TsAnalyzer(sin_df).calculate_dominant_frequency())
+        self.assertEqual(expected_freq, ModelSelector(sin_df).calculate_dominant_frequency())
 
 
 class TestTimeSeriesAnalyzerModelSelection(unittest.TestCase):
@@ -64,7 +64,7 @@ class TestTimeSeriesAnalyzerModelSelection(unittest.TestCase):
         scaler = MinMaxScaler(feature_range=(-1, 0))
         df["value"] = scaler.fit_transform(df.values)
 
-        self.sut: TsAnalyzer = TsAnalyzer(df[["value"]])
+        self.sut: ModelSelector = ModelSelector(df[["value"]])
 
     # @mock.patch('kad.model.sarima_model.SarimaModel')
     # @mock.patch('kad.model.hmm_model.HmmModel')
