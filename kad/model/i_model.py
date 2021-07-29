@@ -1,6 +1,5 @@
-from abc import ABC, abstractmethod
+from abc import ABC
 import pandas as pd
-import numpy as np
 
 
 class ModelException(Exception):

@@ -115,6 +115,10 @@ class ModelsEvaluator:
         return max([0.0, 1 - false_positives_auc / total_auc])
 
     def get_customized_score(self) -> float:
+        print("1st: ", self.calculate_first_scoring_component())
+        print("2nd: ", self.calculate_second_scoring_component())
+        print("3rd: ", self.calculate_third_scoring_component())
+
         return (self.calculate_first_scoring_component() +
                 self.calculate_second_scoring_component() +
                 self.calculate_third_scoring_component()) / 3
