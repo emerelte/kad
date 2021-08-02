@@ -14,6 +14,7 @@ PREDICTIONS_COLUMN: str = "predictions"
 ANOMALIES_COLUMN: str = "is_anomaly"
 GROUND_TRUTH_COLUMN: str = "gt_is_anomaly"
 ANOM_SCORE_COLUMN: str = "anom_score"
+SCORING_FUNCTION_COLUMN: str = "scoring_func"
 ERROR_COLUMN: str = "error"
 
 X_LABEL: str = "timestamp"
