@@ -60,48 +60,45 @@ class ModelsEvaluator:
         plt.legend(loc="lower right")
 
     def __calculate_scoring_function(self):
-        temp_df = self.df.reset_index()
-        temp_df["value_grp"] = (temp_df[GROUND_TRUTH_COLUMN].diff(1) != 0).astype("int").cumsum()
-        grouped = temp_df.groupby("value_grp")
+        self.df["value_grp"] = (self.df[GROUND_TRUTH_COLUMN].diff(1) != 0).astype("int").cumsum()
+        grouped = self.df.groupby("value_grp")
 
         total_index = self.df.reset_index().index.to_numpy()
 
         self.df[SCORING_FUNCTION_COLUMN] = -1
 
-        for name, group in grouped:
-            if group[GROUND_TRUTH_COLUMN].all():
-                anom_idx_in_window = int(len(group) / 2)
-                anom_idx = group.index[anom_idx_in_window]
-                new_scoring_func = 2 / (1 + np.exp(np.abs(total_index - anom_idx) - anom_idx_in_window)) - 1
+        for _, range in grouped:
+            # if a range is anomaly window:
+            if range[GROUND_TRUTH_COLUMN].all():
+                anom_idx_in_window = int(len(range) / 2)
+                absolute_anom_idx = range.index[anom_idx_in_window]
+                new_scoring_func = 2 / (1 + np.exp(np.abs(total_index - absolute_anom_idx) - anom_idx_in_window)) - 1
                 self.df[SCORING_FUNCTION_COLUMN] = np.maximum(new_scoring_func,
                                                               self.df[SCORING_FUNCTION_COLUMN].to_numpy())
 
         plt.plot(self.df.index.to_numpy(), self.df[SCORING_FUNCTION_COLUMN])
         plt.show()
 
-    def calculate_first_scoring_component(self) -> float:
-        temp_df = self.df.reset_index()
-        temp_df["value_grp"] = (temp_df[GROUND_TRUTH_COLUMN].diff(1) != 0).astype("int").cumsum()
-        grouped = temp_df.groupby("value_grp")
+    def calculate_accuracy_scoring_component(self) -> float:
+        grouped = self.df.groupby("value_grp")
 
         partial_scores = np.array([])
 
-        for name, anomaly_window in grouped:
-            if anomaly_window[GROUND_TRUTH_COLUMN].all():
-                anom_idx_in_window = int(len(anomaly_window) / 2)
-                anomaly_window_middle = anomaly_window.iloc[int(len(anomaly_window) / 2)]
-                gt_anom_idx = anomaly_window.index[anomaly_window["timestamp"] == anomaly_window_middle["timestamp"]]
-                detected_idxs = anomaly_window.index[anomaly_window[ANOMALIES_COLUMN]]
+        for _, range in grouped:
+            if range[GROUND_TRUTH_COLUMN].all():
+                anom_idx_in_window = int(len(range) / 2)
+                absolute_anom_idx = range.index[int(len(range) / 2)]
+                detected_idxs = range.index[range[ANOMALIES_COLUMN]]
                 if detected_idxs.empty:
                     partial_scores = np.append(partial_scores, 0.0)
                     continue
 
-                dist_to_closest_pred = min([abs(gt_anom_idx - det_idx) for det_idx in detected_idxs])
-                partial_scores = np.append(partial_scores, 1.0 - dist_to_closest_pred[0] / anom_idx_in_window)
+                dist_to_closest_pred = min([abs(absolute_anom_idx - det_idx) for det_idx in detected_idxs])
+                partial_scores = np.append(partial_scores, 1.0 - dist_to_closest_pred / anom_idx_in_window)
 
         return float(np.mean(partial_scores))
 
-    def calculate_second_scoring_component(self) -> float:
+    def calculate_collective_scoring_component(self) -> float:
         positive_scoring_function = np.array([v if v > 0 else 0 for v in self.df[SCORING_FUNCTION_COLUMN]])
         total_auc = np.sum(positive_scoring_function)
 
@@ -110,7 +107,7 @@ class ModelsEvaluator:
 
         return min([1.0, detected_anomalies_auc / total_auc])
 
-    def calculate_third_scoring_component(self) -> float:
+    def calculate_precision_scoring_component(self) -> float:
         negative_scoring_function = np.array([v if v < 0 else 0 for v in self.df[SCORING_FUNCTION_COLUMN]])
         total_auc = np.sum(negative_scoring_function)
 
@@ -120,10 +117,10 @@ class ModelsEvaluator:
         return min([1.0, 1.0 - detected_anomalies_auc / total_auc])
 
     def get_customized_score(self) -> float:
-        print("1st: ", self.calculate_first_scoring_component())
-        print("2nd: ", self.calculate_second_scoring_component())
-        print("3rd: ", self.calculate_third_scoring_component())
+        print("1st: ", self.calculate_accuracy_scoring_component())
+        print("2nd: ", self.calculate_collective_scoring_component())
+        print("3rd: ", self.calculate_precision_scoring_component())
 
-        return (self.calculate_first_scoring_component() +
-                self.calculate_second_scoring_component() +
-                self.calculate_third_scoring_component()) / 3
+        return (self.calculate_accuracy_scoring_component() +
+                self.calculate_collective_scoring_component() +
+                self.calculate_precision_scoring_component()) / 3

@@ -52,16 +52,16 @@ class TestFirstScoringComponent(TestScoringComponents):
         detected_anom_idx = self.sut.df.index[self.sut.df["timestamp"] == self.anomaly_window_middle["timestamp"]]
         self.sut.df.loc[detected_anom_idx, ANOMALIES_COLUMN] = True
 
-        self.assertEqual(1.0, self.sut.calculate_first_scoring_component())
+        self.assertEqual(1.0, self.sut.calculate_accuracy_scoring_component())
 
     def test_return_0_if_alert_on_the_edge_of_anom_window(self):
         detected_anom_idx = self.sut.df.index[self.sut.df["timestamp"] == self.anomaly_window_start["timestamp"]]
         self.sut.df.loc[detected_anom_idx, ANOMALIES_COLUMN] = True
 
-        self.assertEqual(0.0, self.sut.calculate_first_scoring_component())
+        self.assertEqual(0.0, self.sut.calculate_accuracy_scoring_component())
 
     def test_return_0_if_no_anomalies_found(self):
-        self.assertEqual(0.0, self.sut.calculate_first_scoring_component())
+        self.assertEqual(0.0, self.sut.calculate_accuracy_scoring_component())
 
     def test_return_1_if_one_of_the_alerts_on_the_edge_of_anom_window(self):
         detected_anom_idx = self.sut.df.index[self.sut.df["timestamp"] == self.anomaly_window_start["timestamp"]]
@@ -70,7 +70,7 @@ class TestFirstScoringComponent(TestScoringComponents):
         detected_anom_idx = self.sut.df.index[self.sut.df["timestamp"] == self.anomaly_window_middle["timestamp"]]
         self.sut.df.loc[detected_anom_idx, ANOMALIES_COLUMN] = True
 
-        self.assertEqual(1.0, self.sut.calculate_first_scoring_component())
+        self.assertEqual(1.0, self.sut.calculate_accuracy_scoring_component())
 
     def test_return_0_5_if_alert_matches_one_of_two_anomalies(self):
         self.test_df[GROUND_TRUTH_COLUMN] = False
@@ -81,14 +81,14 @@ class TestFirstScoringComponent(TestScoringComponents):
 
         self.sut = models_evaluator.ModelsEvaluator(self.test_df)
 
-        self.assertEqual(0.5, self.sut.calculate_first_scoring_component())
+        self.assertEqual(0.5, self.sut.calculate_accuracy_scoring_component())
 
 
 class TestSecondScoringComponent(TestScoringComponents):
     def test_return_1_if_covered_whole_anomaly_window(self):
         self.sut.df.loc[:, ANOMALIES_COLUMN] = True
 
-        self.assertEqual(1.0, self.sut.calculate_second_scoring_component())
+        self.assertEqual(1.0, self.sut.calculate_collective_scoring_component())
 
     def test_return_0_5_if_covered_whole_first_anomaly_window(self):
         self.test_df[GROUND_TRUTH_COLUMN] = False
@@ -99,20 +99,20 @@ class TestSecondScoringComponent(TestScoringComponents):
 
         self.sut = models_evaluator.ModelsEvaluator(self.test_df)
 
-        self.assertEqual(0.5, self.sut.calculate_second_scoring_component())
+        self.assertEqual(0.5, self.sut.calculate_collective_scoring_component())
 
     def test_return_0_if_no_anomalies_found(self):
-        self.assertEqual(0.0, self.sut.calculate_second_scoring_component())
+        self.assertEqual(0.0, self.sut.calculate_collective_scoring_component())
 
 
 class TestThirdScoringComponent(TestScoringComponents):
     def test_return_1_if_no_false_positives(self):
-        self.assertEqual(1.0, self.sut.calculate_third_scoring_component())
+        self.assertEqual(1.0, self.sut.calculate_precision_scoring_component())
 
     def test_return_0_if_all_false_positives(self):
         self.sut.df.loc[:, ANOMALIES_COLUMN] = True
 
-        self.assertEqual(0.0, self.sut.calculate_third_scoring_component())
+        self.assertEqual(0.0, self.sut.calculate_precision_scoring_component())
 
     def test_return_if_detection_between_anomaly_windows(self):
         self.test_df[GROUND_TRUTH_COLUMN] = False
@@ -123,6 +123,6 @@ class TestThirdScoringComponent(TestScoringComponents):
 
         self.sut = models_evaluator.ModelsEvaluator(self.test_df)
 
-        second_scoring_comp = self.sut.calculate_third_scoring_component()
+        second_scoring_comp = self.sut.calculate_precision_scoring_component()
         self.assertLess(0.0, second_scoring_comp)
         self.assertGreater(1.0, second_scoring_comp)
