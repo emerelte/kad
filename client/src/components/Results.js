@@ -18,6 +18,8 @@ import "../style/Results.css";
 import {withStyles} from "@material-ui/core";
 
 const REFRESH_TIME_SEC = 2
+const COLOR_BY_DATA = {"value": "orange", "predictions": "green", "is_anomaly": "#5ABEF5FF"}
+
 
 const HtmlTooltip = withStyles((theme) => ({
     tooltip: {
@@ -28,6 +30,31 @@ const HtmlTooltip = withStyles((theme) => ({
         border: '1px solid #dadde9',
     },
 }))(Tooltip);
+
+const CustomRechartsTooltip = ({active, payload, label}) => {
+        console.log(payload)
+        if (active && payload && payload.length) {
+            return (
+                <div>
+                    <h><b>{dateFromTimestamp(label)}</b></h>
+                    <div>Value: <b style={{color: COLOR_BY_DATA["value"]}}>{payload[0].payload.value}</b></div>
+                    {payload[0].payload.predictions ?
+                        <div>
+                            <div>Prediction: <b
+                                style={{color: COLOR_BY_DATA["predictions"]}}>{payload[0].payload.predictions}</b></div>
+                            <div>Is anomaly: <b
+                                style={{color: COLOR_BY_DATA["is_anomaly"]}}>{payload[0].payload.is_anomaly ? "TRUE" : "FALSE"}</b>
+                            </div>
+                        </div>
+                        : <div/>
+                    }
+                </div>
+            );
+        }
+
+        return null;
+    }
+;
 
 class Results extends Component {
     constructor(props) {
@@ -134,10 +161,12 @@ class Results extends Component {
                             <YAxis type="number" tickCount={10} domain={["auto", "auto"]}>
                                 <Label style={{fill: "white"}} value={metric_name} angle={-90} position="left"/>
                             </YAxis>
-                            <RechartsTooltip itemStyle={tooltipStyle} labelFormatter={dateFromTimestamp}/>
-                            <Line type="monotone" dataKey="value" stroke="orange" dot={false}/>
-                            <Line type="monotone" dataKey="predictions" stroke="green" dot={false}/>
-                            <Scatter dataKey="is_anomaly" fill="#5ABEF5FF" shape="diamond" legendType="diamond"/>
+                            <RechartsTooltip content={<CustomRechartsTooltip/>} itemStyle={tooltipStyle}/>
+                            <Line type="monotone" dataKey="value" stroke={COLOR_BY_DATA["value"]} dot={false}/>
+                            <Line type="monotone" dataKey="predictions" stroke={COLOR_BY_DATA["predictions"]}
+                                  dot={false}/>
+                            <Scatter dataKey="is_anomaly" fill={COLOR_BY_DATA["is_anomaly"]} shape="diamond"
+                                     legendType="diamond"/>
                             <Legend verticalAlign="top"/>
                         </ComposedChart>
                     </ResponsiveContainer>
@@ -147,10 +176,7 @@ class Results extends Component {
                 : <div className="results-div-outer">
                     <div className="results-div-inner"><HtmlTooltip placement="right" title={
                         <React.Fragment>
-                            {/*<Typography color="inherit">Show the results obtainted using {model}</Typography>*/}
                             Show the results obtainted using: <b>{model}</b>
-                            {/*<em>{"And here's"}</em> <b>{'some'}</b> <u>{'amazing content'}</u>.{' '}*/}
-                            {/*{"It's very engaging. Right?"}*/}
                         </React.Fragment>
                     }><Button variant="contained"
                               size="large"
