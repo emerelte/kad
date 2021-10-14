@@ -27,6 +27,9 @@ class Keyboard extends Component {
     }
 
     postUpdatedConfig = () => {
+        if (this.state.metric == null || this.state.start_time == null || this.state.stop_time == null) {
+            return;
+        }
         axios.post("http://localhost:5000/update_config", {
             "METRIC_NAME": this.state.metric,
             "MODEL_NAME": this.state.model,
@@ -56,15 +59,20 @@ class Keyboard extends Component {
     };
 
     handleStartTimeChange = (date) => {
-        this.state.start_time.setHours(date.getHours())
-        this.state.start_time.setMinutes(date.getMinutes())
-        this.state.start_time.setSeconds(date.getSeconds())
+        if (date != null) {
+
+            this.state.start_time.setHours(date.getHours())
+            this.state.start_time.setMinutes(date.getMinutes())
+            this.state.start_time.setSeconds(date.getSeconds())
+        }
     };
 
     handleStopTimeChange = (date) => {
-        this.state.stop_time.setHours(date.getHours())
-        this.state.stop_time.setMinutes(date.getMinutes())
-        this.state.stop_time.setSeconds(date.getSeconds())
+        if (date != null) {
+            this.state.stop_time.setHours(date.getHours())
+            this.state.stop_time.setMinutes(date.getMinutes())
+            this.state.stop_time.setSeconds(date.getSeconds())
+        }
     };
 
     render() {
@@ -102,9 +110,11 @@ class Keyboard extends Component {
                                 label="Aut"
                                 style={{width: "100%", marginTop: "1%"}}
                                 onChange={this.handleModelChange}
-                                renderInput={(params) => this.state.model ? <TextField {...params} label="Manual model selection"
-                                                                             variant="outlined"/> : <TextField {...params} label="Automatic model selection"
-                                                                    variant="outlined"/>}
+                                renderInput={(params) => this.state.model ?
+                                    <TextField {...params} label="Manual model selection"
+                                               variant="outlined"/> :
+                                    <TextField {...params} label="Automatic model selection"
+                                               variant="outlined"/>}
                             /></div>
                     </li>
                     <li>
