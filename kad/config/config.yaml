@@ -2,7 +2,6 @@
 PROMETHEUS_URL: "http://localhost:9090"
 START_TIME: "2021-10-14 20:18:00" # the cluster is 2h behind!
 END_TIME: "2021-10-14 20:30:00"
-#METRIC_NAME: "request_duration_seconds_count"
 METRIC_NAME: 'rate(request_duration_seconds_count{job="kubernetes-service-endpoints", kubernetes_name="front-end", kubernetes_namespace="sock-shop", method="get", name="front-end", route="/", service="front-end", status_code="200"}[1m])'
 APP_URL: "http://localhost:5000/"
 UPDATE_DATA_ENDPOINT: "update_data"

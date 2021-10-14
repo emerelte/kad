@@ -53,6 +53,8 @@ if __name__ == "__main__":
             logging.error("Malformed metrics: " + str(exc))
         except DataSourceException as exc:
             logging.error("Too small training df: " + str(exc))
+        except Exception as exc:
+            logging.error("Another exception: " + str(exc))
         finally:
             logging.info("Kad process failed. Retrying after: " + str(RETRY_INTERV) + " seconds")
             sleep(RETRY_INTERV)
