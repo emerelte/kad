@@ -56,7 +56,7 @@ def visualize(results_df: pd.DataFrame, metric_name: str, last_train_sample: int
         columns_labels.append("Predicted & GT Anomalies")
 
     ax.legend(columns_labels)
-    fig.suptitle(title, fontsize=16)
+    # fig.suptitle(title, fontsize=16)
 
     if ANOM_SCORE_COLUMN in results_df:
         ax2 = fig.add_subplot(212)

@@ -9,4 +9,6 @@ COPY . .
 
 WORKDIR /
 
+ENV PYTHONPATH "${PYTHONPATH}:/"
+
 CMD [ "python3", "kad/main.py" ]

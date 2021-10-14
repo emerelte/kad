@@ -16,6 +16,7 @@ from flask_cors import cross_origin, CORS
 
 from kad.data_sources import i_data_source
 from kad.data_sources.exemplary_data_source import ExemplaryDataSource
+from kad.data_sources.prom_data_source import PrometheusDataSource
 from kad.data_sources.i_data_source import DataSourceException
 from kad.kad_utils import kad_utils
 from kad.kad_utils.kad_utils import EndpointAction
@@ -69,18 +70,20 @@ class Core(object):
         daily_jumpsup_csv_path = os.path.join(
             "/home/maciek/Documents/Magisterka/kubernetes-anomaly-detector/notebooks/",
             file)
-        self.data_source = ExemplaryDataSource(
-            path=daily_jumpsup_csv_path,
-            metric_name=self.config["METRIC_NAME"],
-            start_time=datetime.datetime.strptime(self.config["START_TIME"], "%Y-%m-%d %H:%M:%S"),
-            stop_time=datetime.datetime.strptime(self.config["END_TIME"], "%Y-%m-%d %H:%M:%S"),
-            update_interval_hours=10)
-        # self.data_source = PrometheusDataSource(query=p_config["QUERY"],
-        #                                                        prom_url=p_config["PROMETHEUS_URL"],
-        #                                                        metric_name=p_config["METRIC_NAME"],
-        #                                                        start_time=p_config["START_TIME"],
-        #                                                        stop_time=p_config["END_TIME"],
-        #                                                        update_interval_sec=p_config["UPDATE_INTERVAL_SEC"])
+        # self.data_source = ExemplaryDataSource(
+        #     path=daily_jumpsup_csv_path,
+        #     metric_name=self.config["METRIC_NAME"],
+        #     start_time=datetime.datetime.strptime(self.config["START_TIME"], "%Y-%m-%d %H:%M:%S"),
+        #     stop_time=datetime.datetime.strptime(self.config["END_TIME"], "%Y-%m-%d %H:%M:%S"),
+        #     update_interval_hours=10)
+        self.data_source = PrometheusDataSource(query=self.config["METRIC_NAME"],
+                                                metric_name=self.config["METRIC_NAME"],
+                                                prom_url=self.config["PROMETHEUS_URL"],
+                                                start_time=datetime.datetime.strptime(self.config["START_TIME"],
+                                                                                      "%Y-%m-%d %H:%M:%S"),
+                                                stop_time=datetime.datetime.strptime(self.config["END_TIME"],
+                                                                                     "%Y-%m-%d %H:%M:%S"),
+                                                update_interval_sec=self.config["UPDATE_INTERVAL_SEC"])
 
         # self.model = SarimaModel(order=(0, 0, 0), seasonal_order=(1, 0, 1, 24))
         # self.model = AutoEncoderModel(time_steps=12)
@@ -99,7 +102,7 @@ class Core(object):
         train_df = self.__get_train_data()
 
         self.model_selector = model_selector.ModelSelector(train_df)
-        if "MODEL_NAME" in self.config:
+        if "MODEL_NAME" in self.config and self.config["MODEL_NAME"] != "":
             self.model = name_2_model(self.config["MODEL_NAME"], self.model_selector)
         else:
             self.model = self.model_selector.select_model()

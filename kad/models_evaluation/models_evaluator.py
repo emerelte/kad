@@ -37,6 +37,10 @@ class ModelsEvaluator:
         return round(
             metrics.average_precision_score(y_true=self.df[GROUND_TRUTH_COLUMN], y_score=self.df[ANOM_SCORE_COLUMN]), 2)
 
+    def get_precision(self):
+        return round(
+            metrics.precision_score(y_true=self.df[GROUND_TRUTH_COLUMN], y_pred=self.df[ANOMALIES_COLUMN]), 2)
+
     def get_recall_score(self):
         return round(metrics.recall_score(y_true=self.df[GROUND_TRUTH_COLUMN], y_pred=self.df[ANOMALIES_COLUMN]), 2)
 

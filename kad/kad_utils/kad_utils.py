@@ -6,6 +6,8 @@ from flask import Response
 from sklearn.preprocessing import MinMaxScaler
 from matplotlib import pyplot as plt
 
+from kad.data_sources.i_data_source import DataSourceException
+
 PromQueryResponse = List[dict]
 
 TIME_STEPS = 40
@@ -40,7 +42,7 @@ def embed_data(data: np.ndarray, steps: int):
     n = len(data)
 
     if steps >= n:
-        raise Exception(f"Cannot embed data when steps({steps}) >= len(data)({n})")
+        raise DataSourceException(f"Cannot embed data when steps({steps}) >= len(data)({n})")
 
     embedded_data = np.zeros((n - steps, steps))
     labels = data[steps:]
@@ -142,3 +144,7 @@ def customize_matplotlib(color="white", labelsize=16, fontsize="xx-large"):
     plt.rcParams["axes.labelsize"] = labelsize
     plt.rcParams["axes.labelcolor"] = color
     plt.rcParams["legend.fontsize"] = fontsize
+
+
+def customize_matplotlib_for_paper():
+    customize_matplotlib(color="black", labelsize=24, fontsize="xx-large")
