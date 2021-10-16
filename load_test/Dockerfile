@@ -4,7 +4,7 @@ FROM python:3.8-slim-buster
 RUN pip install pyzmq locust faker
 
 RUN mkdir /config
-COPY . /config
+COPY loads /config
 
 WORKDIR /config
 

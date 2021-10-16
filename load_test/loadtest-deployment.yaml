@@ -25,7 +25,7 @@ spec:
       - name: load-test
         image: load-test
         imagePullPolicy: Never
-        workingDir: /config/cyclic_load
+        workingDir: /config/cyclic_with_jumpsup
         command: ["locust", "--host", "http://front-end.sock-shop.svc.cluster.local", "--headless"]
       nodeSelector:
         beta.kubernetes.io/os: linux
