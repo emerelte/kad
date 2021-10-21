@@ -23,7 +23,7 @@ class SarimaModel(i_model.IModel):
 
     @staticmethod
     def __calculate_threshold(valid_errors: np.ndarray) -> float:
-        return 2 * np.max(valid_errors)
+        return np.max(valid_errors)
 
     def train(self, train_df: pd.DataFrame) -> float:
         """

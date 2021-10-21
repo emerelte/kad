@@ -26,7 +26,7 @@ def request_new_data(p_config: dict):
 if __name__ == "__main__":
     logging.basicConfig(filename="/tmp/kad.log", filemode="w",
                         format="[%(levelname)s] %(filename)s:%(lineno)d: %("
-                               "message)s", level=logging.INFO)
+                               "message)s", level=logging.DEBUG)
 
     RETRY_INTERV = 10
 
@@ -43,9 +43,8 @@ if __name__ == "__main__":
             scheduler = BackgroundScheduler()
             job = scheduler.add_job(lambda: request_new_data(config), "interval",
                                     minutes=config["UPDATE_INTERVAL_SEC"] / 60)
-            scheduler.start()
 
-            kad.run()
+            kad.run(scheduler)
 
         except requests.exceptions.ConnectionError:
             logging.error("Could not perform query to Prometheus API")

@@ -5,6 +5,7 @@ import logging
 import os
 import sys
 
+from kad.data_processing import composite_data_processor, upsampler
 from kad.model.model_utils import name_2_model
 from kad.model_selector import model_selector
 
@@ -22,6 +23,9 @@ from kad.kad_utils import kad_utils
 from kad.kad_utils.kad_utils import EndpointAction
 from kad.model import i_model
 from kad.visualization.visualization import visualize
+from prometheus_flask_exporter import PrometheusMetrics
+import time
+from prometheus_client import Summary
 
 
 class Core(object):
@@ -29,6 +33,8 @@ class Core(object):
 
     def __init__(self, p_config: dict):
         self.app = Flask("KAD app")
+        self.metrics = PrometheusMetrics(self.app)
+
         CORS(self.app, resources={r"/*": {"origins": "*"}})
 
         self.config: dict = p_config
@@ -70,20 +76,20 @@ class Core(object):
         daily_jumpsup_csv_path = os.path.join(
             "/home/maciek/Documents/Magisterka/kubernetes-anomaly-detector/notebooks/",
             file)
-        # self.data_source = ExemplaryDataSource(
-        #     path=daily_jumpsup_csv_path,
-        #     metric_name=self.config["METRIC_NAME"],
-        #     start_time=datetime.datetime.strptime(self.config["START_TIME"], "%Y-%m-%d %H:%M:%S"),
-        #     stop_time=datetime.datetime.strptime(self.config["END_TIME"], "%Y-%m-%d %H:%M:%S"),
-        #     update_interval_hours=10)
-        self.data_source = PrometheusDataSource(query=self.config["METRIC_NAME"],
-                                                metric_name=self.config["METRIC_NAME"],
-                                                prom_url=self.config["PROMETHEUS_URL"],
-                                                start_time=datetime.datetime.strptime(self.config["START_TIME"],
-                                                                                      "%Y-%m-%d %H:%M:%S"),
-                                                stop_time=datetime.datetime.strptime(self.config["END_TIME"],
-                                                                                     "%Y-%m-%d %H:%M:%S"),
-                                                update_interval_sec=self.config["UPDATE_INTERVAL_SEC"])
+        self.data_source = ExemplaryDataSource(
+            path=daily_jumpsup_csv_path,
+            metric_name=self.config["METRIC_NAME"],
+            start_time=datetime.datetime.strptime(self.config["START_TIME"], "%Y-%m-%d %H:%M:%S"),
+            stop_time=datetime.datetime.strptime(self.config["END_TIME"], "%Y-%m-%d %H:%M:%S"),
+            update_interval_hours=10)
+        # self.data_source = PrometheusDataSource(query=self.config["METRIC_NAME"],
+        #                                         metric_name=self.config["METRIC_NAME"],
+        #                                         prom_url=self.config["PROMETHEUS_URL"],
+        #                                         start_time=datetime.datetime.strptime(self.config["START_TIME"],
+        #                                                                               "%Y-%m-%d %H:%M:%S"),
+        #                                         stop_time=datetime.datetime.strptime(self.config["END_TIME"],
+        #                                                                              "%Y-%m-%d %H:%M:%S"),
+        #                                         update_interval_sec=self.config["UPDATE_INTERVAL_SEC"])
 
         # self.model = SarimaModel(order=(0, 0, 0), seasonal_order=(1, 0, 1, 24))
         # self.model = AutoEncoderModel(time_steps=12)
@@ -93,6 +99,9 @@ class Core(object):
 
     def __get_train_data(self) -> pd.DataFrame:
         train_df = self.data_source.get_train_data()
+
+        train_df.to_pickle("train_df.pkl")
+
         self.last_train_sample = len(train_df)
         self.train_mean = train_df.mean()
         self.train_std = train_df.std()
@@ -112,6 +121,7 @@ class Core(object):
 
         if len(train_df) < 2:
             logging.warning("Almost empty training df (len < 2)")
+
         logging.info("Model trained")
 
     def test(self, test_df):
@@ -129,8 +139,9 @@ class Core(object):
         bytes_image.seek(0)
         return bytes_image
 
-    def run(self):
+    def run(self, p_scheduler):
         self.__select_and_train_model()
+        p_scheduler.start()
         self.app.run(debug=True, threaded=False)
 
     def add_endpoint(self, endpoint=None, endpoint_name=None, handler=None):
@@ -200,26 +211,31 @@ class Core(object):
         json_data = request.get_json()
         print(json_data)
 
-        if not self.are_changes_in_config(json_data):
-            logging.warning("No changes in config")
-            return Response(status=200, headers={})
+        # TODO uncomment
+        # if not self.are_changes_in_config(json_data):
+        #     logging.warning("No changes in config")
+        #     return Response(status=200, headers={})
 
-        logging.info("Updating config accepted")
+        logging.info("Changes in config - update needed")
         try:
             self.config["METRIC_NAME"] = json_data["METRIC_NAME"]
             self.config["START_TIME"] = json_data["START_TIME"]
             self.config["END_TIME"] = json_data["END_TIME"]
-            self.config["MODEL_NAME"] = json_data["MODEL_NAME"]
+            if "MODEL_NAME" in json_data.keys():
+                self.config["MODEL_NAME"] = json_data["MODEL_NAME"]
+            else:
+                self.config["MODEL_NAME"] = ""
             self.set_up()
 
             logging.info("Training once again")
             self.__select_and_train_model()
-        except Exception:
-            logging.error("Unsuccessfull config update - resetting config")
+        except Exception as ex:
+            logging.error("Unsuccessful config update - resetting config. Exception: " + str(ex))
             self.reset()
             return jsonify({"Error": "Unsuccessfull config update - resetting config"})
 
-        return Response(status=200, headers={})
+        logging.info("Update config successful")
+        return jsonify({"train_df_len": self.last_train_sample})
 
     def are_changes_in_config(self, new_config: dict) -> bool:
         shared_items = {k: self.config[k] for k in self.config if k in new_config and self.config[k] == new_config[k]}
