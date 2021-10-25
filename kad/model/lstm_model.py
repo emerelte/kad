@@ -6,8 +6,8 @@ import numpy as np
 import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler
-from tensorflow import keras
-from tensorflow.keras import layers
+import keras
+from keras import layers
 from kad.kad_utils import kad_utils
 from matplotlib import pyplot as plt
 
@@ -45,7 +45,7 @@ class LstmModel(IModel):
                 layers.Dense(self.y_train.shape[1]),
             ]
         )
-        self.nn.compile(optimizer=keras.optimizers.Adam(learning_rate=0.001), loss="mse")
+        self.nn.compile(optimizer=keras.optimizers.Adam(lr=0.001), loss="mse")
         self.nn.summary()
 
     def __update_threshold(self):
