@@ -48,3 +48,5 @@ KAD provides HTTP API that allows to fetch data from the application and modify 
 ## Exemplary client
 
 KAD comes with an exemplary client application that uses the KAD HTTP API to communicate with the system and graphically visualize its behaviour. The client is written using React framework and allows manipulating KAD config and displaying the analysed time series.
+
+![kad](https://user-images.githubusercontent.com/39968023/139718190-0b40b106-ee77-4c8f-a412-ba558a7a0d6f.gif)
