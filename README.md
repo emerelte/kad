@@ -10,9 +10,13 @@ KAD is a system that uses Machine Learning to perform Anomaly Detection in a clu
 
 First, adjust the configuration file (`kad/config.yaml`), specifying the data source fot the system and metric that will be monitored.
 
-Then, install the requirements:
+Make sure that your Python version is `Python 3.6`. Then, install the requirements:
 
-`pip install -r requirements.txt`
+`pip install -r kad/requirements.txt`
+
+Make sure that the repo is visible in PYTHONPATH:
+
+`export PYTHONPATH=[PATH_TO_REPO_ROOT]`
 
 Then you can start the application:
 
