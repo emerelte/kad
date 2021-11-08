@@ -34,6 +34,10 @@ To start the application in k8s cluster, run the following:
     kubectl apply -f kad-deployment.yaml
     kubectl apply -f kad-service.yaml
 
+### Docker-compose
+
+Type `docker-compose up --build kad` to start KAD using docker-compose. You can also use `docker-compose up --build load-test` to generate an artificial load in the cluster using [Locust](https://locust.io/). To run an exemplary Minikube cluster, you can use `minikube_cluster/setup.sh`. Be aware that the script uses an [exemplary application](https://microservices-demo.github.io/) -- it has to be cloned first.
+
 ## Architecture
 
 KAD consists of six independent modules: Core, Data Source Module, Data Processing Module, Model, Model Selector and Visualization Module. The core module connects all the other modules and manages the application. The Data Source Module provides a general interface that is a communication channel between KAD and the observed cluster. Currently, the system supports Prometheus data format. The Data Processing Module manipulates the data format and adjusts it to the requirements of Machine Learning Models. The Model Selector is a module that chooses a model that fits training data best. The Visualization Module gives some additional features related to the system output.
