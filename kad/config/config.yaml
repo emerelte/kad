@@ -1,24 +1,24 @@
 #PROMETHEUS
-PROMETHEUS_URL: "http://localhost:9090"
-START_TIME: "2021-10-18 18:00:00" # the cluster is 2h behind!
-END_TIME: "2021-10-18 18:20:00"
-METRIC_NAME: 'rate(request_duration_seconds_count{job="kubernetes-service-endpoints", kubernetes_name="front-end", kubernetes_namespace="sock-shop", method="get", name="front-end", route="/", service="front-end", status_code="200"}[1m])'
-APP_URL: "http://localhost:5000/"
-UPDATE_DATA_ENDPOINT: "update_data"
-GET_RESULTS_ENDPOINT: "get_results"
-PLOT_RESULTS_ENDPOINT: "plot_results"
-UPDATE_CONFIG_ENDPOINT: "update_config"
-UPDATE_INTERVAL_SEC: 5
-MODEL_NAME: "SarimaModel"
-
-#DUMMY
-#START_TIME: "2014-04-01 14:00:00"
-#END_TIME: "2014-04-09 14:00:00"
-#METRIC_NAME: "value"
+#PROMETHEUS_URL: "http://localhost:9090"
+#START_TIME: "2021-10-18 18:00:00" # the cluster is 2h behind!
+#END_TIME: "2021-10-18 18:20:00"
+#METRIC_NAME: 'rate(request_duration_seconds_count{job="kubernetes-service-endpoints", kubernetes_name="front-end", kubernetes_namespace="sock-shop", method="get", name="front-end", route="/", service="front-end", status_code="200"}[1m])'
 #APP_URL: "http://localhost:5000/"
-#METRICS_PORT: "5099"
 #UPDATE_DATA_ENDPOINT: "update_data"
 #GET_RESULTS_ENDPOINT: "get_results"
 #PLOT_RESULTS_ENDPOINT: "plot_results"
 #UPDATE_CONFIG_ENDPOINT: "update_config"
-#UPDATE_INTERVAL_SEC: 10
+#UPDATE_INTERVAL_SEC: 5
+#MODEL_NAME: "SarimaModel"
+
+#DUMMY
+START_TIME: "2014-04-01 14:00:00"
+END_TIME: "2014-04-09 14:00:00"
+METRIC_NAME: "value"
+APP_URL: "http://localhost:5000/"
+METRICS_PORT: "5099"
+UPDATE_DATA_ENDPOINT: "update_data"
+GET_RESULTS_ENDPOINT: "get_results"
+PLOT_RESULTS_ENDPOINT: "plot_results"
+UPDATE_CONFIG_ENDPOINT: "update_config"
+UPDATE_INTERVAL_SEC: 10

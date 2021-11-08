@@ -72,24 +72,24 @@ class Core(object):
         self.train_std = None
 
     def set_up(self):
-        # file = "data/archive/artificialWithAnomaly/artificialWithAnomaly/art_daily_jumpsup.csv"
-        # daily_jumpsup_csv_path = os.path.join(
-        #     "/home/maciek/Documents/Magisterka/kubernetes-anomaly-detector/notebooks/",
-        #     file)
-        # self.data_source = ExemplaryDataSource(
-        #     path=daily_jumpsup_csv_path,
-        #     metric_name=self.config["METRIC_NAME"],
-        #     start_time=datetime.datetime.strptime(self.config["START_TIME"], "%Y-%m-%d %H:%M:%S"),
-        #     stop_time=datetime.datetime.strptime(self.config["END_TIME"], "%Y-%m-%d %H:%M:%S"),
-        #     update_interval_hours=10)
-        self.data_source = PrometheusDataSource(query=self.config["METRIC_NAME"],
-                                                metric_name=self.config["METRIC_NAME"],
-                                                prom_url=self.config["PROMETHEUS_URL"],
-                                                start_time=datetime.datetime.strptime(self.config["START_TIME"],
-                                                                                      "%Y-%m-%d %H:%M:%S"),
-                                                stop_time=datetime.datetime.strptime(self.config["END_TIME"],
-                                                                                     "%Y-%m-%d %H:%M:%S"),
-                                                update_interval_sec=self.config["UPDATE_INTERVAL_SEC"])
+        file = "data/archive/artificialWithAnomaly/artificialWithAnomaly/art_daily_jumpsup.csv"
+        daily_jumpsup_csv_path = os.path.join(
+            "/home/maciek/Documents/Magisterka/kubernetes-anomaly-detector/notebooks/",
+            file)
+        self.data_source = ExemplaryDataSource(
+            path=daily_jumpsup_csv_path,
+            metric_name=self.config["METRIC_NAME"],
+            start_time=datetime.datetime.strptime(self.config["START_TIME"], "%Y-%m-%d %H:%M:%S"),
+            stop_time=datetime.datetime.strptime(self.config["END_TIME"], "%Y-%m-%d %H:%M:%S"),
+            update_interval_hours=10)
+        # self.data_source = PrometheusDataSource(query=self.config["METRIC_NAME"],
+        #                                         metric_name=self.config["METRIC_NAME"],
+        #                                         prom_url=self.config["PROMETHEUS_URL"],
+        #                                         start_time=datetime.datetime.strptime(self.config["START_TIME"],
+        #                                                                               "%Y-%m-%d %H:%M:%S"),
+        #                                         stop_time=datetime.datetime.strptime(self.config["END_TIME"],
+        #                                                                              "%Y-%m-%d %H:%M:%S"),
+        #                                         update_interval_sec=self.config["UPDATE_INTERVAL_SEC"])
 
         # self.model = SarimaModel(order=(0, 0, 0), seasonal_order=(1, 0, 1, 24))
         # self.model = AutoEncoderModel(time_steps=12)
@@ -101,6 +101,10 @@ class Core(object):
         train_df = self.data_source.get_train_data()
 
         train_df.to_pickle("train_df.pkl")
+
+        # data_proc = composite_data_processor.CompositeDataProcessor(
+        #     [upsampler.Upsampler("10s")])
+        # train_df = data_proc.transform_data(train_df)
 
         self.last_train_sample = len(train_df)
         self.train_mean = train_df.mean()
@@ -211,10 +215,9 @@ class Core(object):
         json_data = request.get_json()
         print(json_data)
 
-        # TODO uncomment
-        # if not self.are_changes_in_config(json_data):
-        #     logging.warning("No changes in config")
-        #     return Response(status=200, headers={})
+        if not self.are_changes_in_config(json_data):
+            logging.warning("No changes in config")
+            return Response(status=200, headers={})
 
         logging.info("Changes in config - update needed")
         try:
